@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-html-link-for-pages */
 
 import {
   bundledSongs,
@@ -16,7 +17,6 @@ import {
   useMemo,
   useState,
 } from "react";
-import Link from "next/link";
 
 const dateFormatter = new Intl.DateTimeFormat("zh-HK", {
   dateStyle: "medium",
@@ -86,7 +86,7 @@ function useLibrary() {
 function SiteHeader() {
   return (
     <header className="site-header">
-      <Link className="brand" href="/" aria-label="聽歌學日文首頁">
+      <a className="brand" href="/" aria-label="聽歌學日文首頁">
         <span className="brand-mark" aria-hidden="true">
           聴
         </span>
@@ -94,11 +94,11 @@ function SiteHeader() {
           <strong>聽歌學日文</strong>
           <small>UTA × NIHONGO</small>
         </span>
-      </Link>
+      </a>
       <nav aria-label="主要導覽">
-        <Link href="/#songs">歌曲目錄</Link>
-        <Link href="/grammar">文法索引</Link>
-        <Link href="/vocabulary">生字索引</Link>
+        <a href="/#songs">歌曲目錄</a>
+        <a href="/grammar">文法索引</a>
+        <a href="/vocabulary">生字索引</a>
       </nav>
     </header>
   );
@@ -151,7 +151,7 @@ function Scanner({
 
 function SongCard({ song, number }: { song: Song; number: number }) {
   return (
-    <Link className="song-card" href={`/songs/${song.slug}`}>
+    <a className="song-card" href={`/songs/${song.slug}`}>
       <span className="song-number">{String(number).padStart(2, "0")}</span>
       <div>
         <span className="eyebrow">{song.level}</span>
@@ -168,7 +168,7 @@ function SongCard({ song, number }: { song: Song; number: number }) {
       <span className="arrow" aria-hidden="true">
         →
       </span>
-    </Link>
+    </a>
   );
 }
 
@@ -199,12 +199,12 @@ export function HomeView() {
               由逐句翻譯、文法拆解到生字讀音，把每一首喜歡的歌變成一課真正用得着的日文。
             </p>
             <div className="hero-actions">
-              <Link className="primary-button" href="#songs">
+              <a className="primary-button" href="#songs">
                 開始學習 <span aria-hidden="true">↓</span>
-              </Link>
-              <Link className="text-link" href="/grammar">
+              </a>
+              <a className="text-link" href="/grammar">
                 瀏覽文法索引 →
-              </Link>
+              </a>
             </div>
           </div>
           <div className="hero-poster" aria-label="日文歌詞學習示意">
@@ -351,9 +351,9 @@ export function SongView({ slug }: { slug: string }) {
           <span className="eyebrow">404 / SONG NOT FOUND</span>
           <h1>暫時搵唔到呢首歌。</h1>
           <p>可以先回到歌曲目錄，再按「掃描新歌曲」同步最新內容。</p>
-          <Link className="primary-button" href="/#songs">
+          <a className="primary-button" href="/#songs">
             返回歌曲目錄
-          </Link>
+          </a>
         </main>
         <SiteFooter />
       </>
@@ -404,9 +404,9 @@ export function SongView({ slug }: { slug: string }) {
                 </a>
               ))}
             </nav>
-            <Link className="back-link" href="/#songs">
+            <a className="back-link" href="/#songs">
               ← 返回歌曲目錄
-            </Link>
+            </a>
           </aside>
 
           <article className="lesson">
@@ -635,7 +635,7 @@ export function IndexView({ kind }: { kind: "grammar" | "vocabulary" }) {
 
         <div className="index-list">
           {entries.map(({ song, item }, index) => (
-            <Link
+            <a
               key={`${song.slug}-${item.id}`}
               href={`/songs/${song.slug}#${
                 isGrammar ? "grammar" : "word"
@@ -660,7 +660,7 @@ export function IndexView({ kind }: { kind: "grammar" | "vocabulary" }) {
                 <strong>{song.title}</strong>
               </div>
               <i aria-hidden="true">→</i>
-            </Link>
+            </a>
           ))}
           {!entries.length && (
             <p className="empty-result">沒有符合「{query}」的項目。</p>
