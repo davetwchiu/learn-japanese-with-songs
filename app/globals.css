@@ -158,6 +158,27 @@ rt {
   transform: scaleX(1);
 }
 
+.site-header nav .offline-update {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  min-width: 60px;
+  padding: 5px 10px;
+}
+
+.site-header nav .offline-update::after {
+  display: none;
+}
+
+.site-header nav .offline-update[data-status="done"] {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.site-header nav .offline-update:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .hero {
   display: grid;
   gap: clamp(36px, 6vw, 96px);

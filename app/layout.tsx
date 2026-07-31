@@ -24,6 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description:
       "逐句翻譯、文法拆解、ruby 假名注音與生字索引，把喜歡的日文歌變成實用課堂。",
+    manifest: "/site.webmanifest",
     icons: {
       icon: [
         {

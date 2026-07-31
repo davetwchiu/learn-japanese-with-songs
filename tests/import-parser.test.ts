@@ -230,3 +230,18 @@ test("removes the unneeded eight-angles block from the site", async () => {
   );
   assert.doesNotMatch(source, /ONE SONG, EIGHT ANGLES|八個學習入口/);
 });
+
+test("includes offline learning support and a manual update control", async () => {
+  const [worker, client, layout, manifest] = await Promise.all([
+    readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
+    readFile(new URL("../app/site-client.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../public/site.webmanifest", import.meta.url), "utf8"),
+  ]);
+  assert.match(worker, /CACHE_URLS/);
+  assert.match(worker, /\/api\/songs/);
+  assert.match(client, /serviceWorker[\s\S]+?\.register\("\/sw\.js"/);
+  assert.match(client, /更新離線學習內容/);
+  assert.match(layout, /site\.webmanifest/);
+  assert.equal(JSON.parse(manifest).display, "standalone");
+});

@@ -1,0 +1,18 @@
+{
+  "name": "聽歌學日文",
+  "short_name": "聽歌學日文",
+  "description": "一邊聽、一邊讀、一邊學日文。",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4efe6",
+  "theme_color": "#202b43",
+  "lang": "zh-HK",
+  "icons": [
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

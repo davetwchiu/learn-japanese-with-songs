@@ -51,11 +51,111 @@ function useLibrary() {
   return songs;
 }
 
+type OfflineStatus = "idle" | "working" | "done" | "error" | "unsupported";
+
+function messageServiceWorker(
+  registration: ServiceWorkerRegistration,
+  message: { type: string; urls?: string[] },
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (!registration.active) {
+      reject(new Error("離線功能尚未準備好。"));
+      return;
+    }
+    const channel = new MessageChannel();
+    const timeout = window.setTimeout(
+      () => reject(new Error("更新時間過長，請再試一次。")),
+      45_000,
+    );
+    channel.port1.onmessage = (event) => {
+      window.clearTimeout(timeout);
+      if (event.data?.ok) {
+        resolve();
+      } else {
+        reject(new Error("部分內容未能下載，請再試一次。"));
+      }
+    };
+    registration.active.postMessage(message, [channel.port2]);
+  });
+}
+
 export function SiteHeader() {
+  const [offlineStatus, setOfflineStatus] =
+    useState<OfflineStatus>("idle");
+
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    navigator.serviceWorker
+      .register("/sw.js", { scope: "/", updateViaCache: "none" })
+      .catch(() => setOfflineStatus("error"));
+  }, []);
+
+  async function updateOffline() {
+    if (!("serviceWorker" in navigator)) {
+      setOfflineStatus("unsupported");
+      return;
+    }
+    setOfflineStatus("working");
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.update();
+      const response = await fetch("/api/songs", { cache: "no-store" });
+      if (!response.ok) throw new Error("未能讀取歌曲目錄。");
+      const payload = (await response.json()) as {
+        songs?: { slug?: unknown }[];
+      };
+      const slugs = (payload.songs ?? [])
+        .map((song) => String(song.slug ?? "").trim())
+        .filter(Boolean);
+      const loadedAssets = performance
+        .getEntriesByType("resource")
+        .map((entry) => new URL(entry.name))
+        .filter((url) => url.origin === window.location.origin)
+        .map((url) => `${url.pathname}${url.search}`);
+      await messageServiceWorker(registration, {
+        type: "CACHE_URLS",
+        urls: [
+          "/",
+          "/grammar",
+          "/vocabulary",
+          "/api/songs",
+          "/apple-touch-icon.png",
+          "/icon-512.png",
+          ...loadedAssets,
+          ...slugs.flatMap((slug) => [
+            `/songs/${encodeURIComponent(slug)}`,
+            `/api/songs/${encodeURIComponent(slug)}`,
+          ]),
+        ],
+      });
+      setOfflineStatus("done");
+      window.setTimeout(() => setOfflineStatus("idle"), 3_000);
+    } catch {
+      setOfflineStatus("error");
+    }
+  }
+
   async function logout() {
+    if ("serviceWorker" in navigator) {
+      try {
+        await messageServiceWorker(await navigator.serviceWorker.ready, {
+          type: "CLEAR_CACHE",
+        });
+      } catch {
+        // Continue signing out even when offline storage cannot be cleared.
+      }
+    }
     await fetch("/api/auth/logout", { method: "POST" });
     window.location.reload();
   }
+
+  const offlineLabel = {
+    idle: "更新",
+    working: "更新中…",
+    done: "已更新",
+    error: "重試",
+    unsupported: "不支援",
+  }[offlineStatus];
 
   return (
     <header className="site-header">
@@ -73,6 +173,20 @@ export function SiteHeader() {
         <a href="/grammar">文法索引</a>
         <a href="/vocabulary">生字索引</a>
         <a href="/import">匯入課文</a>
+        <button
+          className="offline-update"
+          type="button"
+          data-status={offlineStatus}
+          onClick={updateOffline}
+          disabled={
+            offlineStatus === "working" || offlineStatus === "unsupported"
+          }
+          aria-label="更新離線學習內容"
+          aria-live="polite"
+          title="下載最新課文，方便離線學習"
+        >
+          {offlineLabel}
+        </button>
         <button type="button" onClick={logout}>
           登出
         </button>
