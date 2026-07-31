@@ -344,14 +344,22 @@ export function YouTubePlayer({
           allowFullScreen
         />
       </div>
-      {resumePrompt && (
-        <div className="player-resume">
-          <p aria-live="polite">影片因切換 App 而暫停。</p>
-          <button type="button" onClick={() => manualResumeRef.current()}>
-            ▶ 繼續播放
-          </button>
-        </div>
-      )}
+      <p className="player-resume-announcement" aria-live="polite">
+        {resumePrompt
+          ? "影片因切換 App 而暫停，可使用右下角按鈕繼續播放。"
+          : ""}
+      </p>
+      <button
+        type="button"
+        className="floating-player-resume"
+        data-visible={resumePrompt ? "true" : "false"}
+        aria-hidden={!resumePrompt}
+        aria-label="繼續播放"
+        tabIndex={resumePrompt ? 0 : -1}
+        onClick={() => manualResumeRef.current()}
+      >
+        <span className="floating-player-resume-icon" aria-hidden="true" />
+      </button>
     </div>
   );
 }

@@ -307,9 +307,10 @@ test("includes offline learning support and a manual update control", async () =
 });
 
 test("resumes YouTube playback after returning from another app", async () => {
-  const [client, player] = await Promise.all([
+  const [client, player, styles] = await Promise.all([
     readFile(new URL("../app/site-client.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/youtube-player.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
   assert.match(client, /<YouTubePlayer/);
   assert.match(player, /enablejsapi/);
@@ -318,5 +319,12 @@ test("resumes YouTube playback after returning from another app", async () => {
   assert.match(player, /sessionStorage/);
   assert.match(player, /playVideo\(\)/);
   assert.match(player, /onAutoplayBlocked/);
+  assert.match(player, /className="floating-player-resume"/);
+  assert.match(player, /data-visible=\{resumePrompt/);
   assert.match(player, /繼續播放/);
+  assert.match(
+    styles,
+    /\.floating-player-resume\s*\{[\s\S]*?position:\s*fixed;/,
+  );
+  assert.match(styles, /safe-area-inset-bottom/);
 });

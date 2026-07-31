@@ -650,53 +650,68 @@ rt {
   width: 100%;
 }
 
-.player-resume {
+.player-resume-announcement {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.floating-player-resume {
   align-items: center;
-  background: var(--paper-deep);
-  border: 1px solid var(--line);
-  border-top: 0;
-  display: flex;
-  gap: 18px;
-  justify-content: space-between;
-  padding: 14px 16px;
-}
-
-.player-resume p {
-  color: var(--ink-soft);
-  font-size: 13px;
-  margin: 0;
-}
-
-.player-resume button {
   background: var(--red);
-  border: 1px solid var(--red);
+  border: 2px solid var(--white);
+  border-radius: 999px;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 12px 34px rgba(32, 43, 67, 0.3);
   color: var(--white);
   cursor: pointer;
-  flex: none;
-  font-size: 13px;
-  font-weight: 800;
-  min-height: 42px;
-  padding: 9px 16px;
+  display: inline-flex;
+  height: 48px;
+  justify-content: center;
+  opacity: 0;
+  padding: 0;
+  pointer-events: none;
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right, 0px));
+  transform: translateY(14px) scale(0.96);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    background 160ms ease;
+  width: 48px;
+  z-index: 60;
 }
 
-.player-resume button:hover {
+.floating-player-resume[data-visible="true"] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.floating-player-resume:hover {
   background: var(--ink);
-  border-color: var(--ink);
 }
 
-.player-resume button:focus-visible {
+.floating-player-resume:focus-visible {
   outline-color: var(--ink);
 }
 
-@media (max-width: 540px) {
-  .player-resume {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 10px;
-  }
+.floating-player-resume-icon {
+  border-bottom: 8px solid transparent;
+  border-left: 12px solid currentColor;
+  border-top: 8px solid transparent;
+  height: 0;
+  margin-left: 3px;
+  width: 0;
+}
 
-  .player-resume button {
-    align-self: flex-start;
+@media (prefers-reduced-motion: reduce) {
+  .floating-player-resume {
+    transition: none;
   }
 }
 
