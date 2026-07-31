@@ -6,6 +6,7 @@ import {
   fetchSong,
   loadSongLibrary,
   type Song,
+  vocabularySortKey,
 } from "./song-data";
 import {
   type ReactNode,
@@ -93,6 +94,7 @@ export function SiteFooter() {
 }
 
 function SongCard({ song, number }: { song: Song; number: number }) {
+  const tags = song.tags.filter((tag) => tag !== "匯入");
   return (
     <a className="song-card" href={`/songs/${song.slug}`}>
       <span className="song-number">{String(number).padStart(2, "0")}</span>
@@ -108,7 +110,7 @@ function SongCard({ song, number }: { song: Song; number: number }) {
         <p>{song.artist}</p>
       </div>
       <div className="song-tags">
-        {song.tags.slice(0, 2).map((tag) => (
+        {tags.slice(0, 2).map((tag) => (
           <span key={tag}>{tag}</span>
         ))}
       </div>
@@ -277,6 +279,8 @@ export function SongView({ slug }: { slug: string }) {
     );
   }
 
+  const tags = song.tags.filter((tag) => tag !== "匯入");
+
   return (
     <>
       <SiteHeader />
@@ -284,7 +288,8 @@ export function SongView({ slug }: { slug: string }) {
         <header className="song-hero">
           <div>
             <span className="eyebrow">
-              {song.level} · {song.tags.join(" / ")}
+              {song.level}
+              {tags.length > 0 ? ` · ${tags.join(" / ")}` : ""}
             </span>
             <h1>
               <RubyText>
@@ -295,6 +300,9 @@ export function SongView({ slug }: { slug: string }) {
             </h1>
             <p className="song-artist">{song.artist}</p>
             <p className="song-summary">{song.summary}</p>
+            <a className="manage-link" href={`/songs/${song.slug}/manage`}>
+              管理課文與影片 →
+            </a>
           </div>
           <div className="player-shell">
             {song.youtubeId ? (
@@ -351,7 +359,16 @@ export function SongView({ slug }: { slug: string }) {
                       <RubyText>{line.jp}</RubyText>
                     </p>
                     <p className="translation">{line.zh}</p>
-                    {line.note && <small>{line.note}</small>}
+                    {line.note && (
+                      <aside className="lyric-annotation">
+                        <strong>段落解讀</strong>
+                        {line.note
+                          .split(/\n\s*\n/)
+                          .map((paragraph, noteIndex) => (
+                            <p key={`${index}-${noteIndex}`}>{paragraph}</p>
+                          ))}
+                      </aside>
+                    )}
                   </div>
                 ))}
               </div>
@@ -525,9 +542,18 @@ export function IndexView({ kind }: { kind: "grammar" | "vocabulary" }) {
           return text.toLocaleLowerCase().includes(query.toLocaleLowerCase());
         })
         .sort((a, b) => {
-          const left = "pattern" in a.item ? a.item.pattern : a.item.reading;
-          const right = "pattern" in b.item ? b.item.pattern : b.item.reading;
-          return left.localeCompare(right, "ja");
+          if ("pattern" in a.item && "pattern" in b.item) {
+            return a.item.pattern.localeCompare(b.item.pattern, "ja");
+          }
+          if ("term" in a.item && "term" in b.item) {
+            return (
+              vocabularySortKey(a.item).localeCompare(
+                vocabularySortKey(b.item),
+                "ja",
+              ) || a.item.term.localeCompare(b.item.term, "ja")
+            );
+          }
+          return 0;
         }),
     [isGrammar, songs, query],
   );

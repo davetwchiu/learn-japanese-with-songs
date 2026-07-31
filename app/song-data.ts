@@ -48,6 +48,16 @@ export type Song = {
   rawText?: string;
 };
 
+export function vocabularySortKey(
+  word: Pick<Vocabulary, "term" | "reading">,
+): string {
+  return (word.reading.trim() || word.term.trim())
+    .normalize("NFKC")
+    .replace(/[ァ-ヶ]/g, (character) =>
+      String.fromCharCode(character.charCodeAt(0) - 0x60),
+    );
+}
+
 export function normalizeSong(value: unknown): Song {
   const song = (value ?? {}) as Partial<Song>;
   return {

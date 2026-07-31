@@ -176,9 +176,13 @@ function looksJapanese(value: string): boolean {
   return /[ぁ-ゖァ-ヺー々〆ヶ]/u.test(value);
 }
 
-function markdownPairs(value: string): { jp: string; zh: string }[] {
+function scanMarkdownPairs(value: string): {
+  pairs: { jp: string; zh: string }[];
+  consumed: Set<number>;
+} {
   const lines = value.split("\n");
   const pairs: { jp: string; zh: string }[] = [];
+  const consumed = new Set<number>();
   for (let index = 0; index < lines.length; index += 1) {
     const sourceLine = lines[index].trim();
     const marked =
@@ -206,11 +210,59 @@ function markdownPairs(value: string): { jp: string; zh: string }[] {
         break;
       }
       pairs.push({ jp: japanese, zh: pairLine(translation) });
+      consumed.add(index);
+      consumed.add(next);
       index = next;
       break;
     }
   }
-  return pairs;
+  return { pairs, consumed };
+}
+
+function markdownPairs(value: string): { jp: string; zh: string }[] {
+  return scanMarkdownPairs(value).pairs;
+}
+
+function lyricNote(value: string): string {
+  const note = cleanMarkdown(
+    value
+      .split("\n")
+      .filter((line) => {
+        const trimmed = line.trim();
+        return (
+          trimmed &&
+          !/^#{1,6}\s+/.test(trimmed) &&
+          !/^---+$/.test(trimmed) &&
+          !/^\|.+\|$/.test(trimmed)
+        );
+      })
+      .join("\n"),
+  );
+  if (
+    /^(?:第[一二三四五六七八九十\d]+段|副歌|主歌|前奏|間奏|尾聲|verse|chorus)[：:]?$/i.test(
+      note,
+    )
+  ) {
+    return "";
+  }
+  return note;
+}
+
+function lyricItems(value: string): Song["lyrics"] {
+  const lyrics: Song["lyrics"] = [];
+  for (const block of value.split(/\n\s*\n/)) {
+    const lines = block.split("\n");
+    const { pairs, consumed } = scanMarkdownPairs(block);
+    lyrics.push(...pairs);
+    const note = lyricNote(
+      lines.filter((_, index) => !consumed.has(index)).join("\n"),
+    );
+    if (note && lyrics.length) {
+      const previous = lyrics.at(-1)!;
+      previous.note = [previous.note, note].filter(Boolean).join("\n\n");
+    }
+  }
+  return lyrics;
 }
 
 function markdownParagraphs(value: string): string[] {
@@ -471,7 +523,7 @@ export function parseImportedLesson(
   const spokenSection = sections.spoken ?? "";
   const pitfallsSection = sections.pitfalls ?? "";
   const phrasesSection = sections.phrases ?? "";
-  const parsedLyrics = markdownPairs(lyricsSection);
+  const parsedLyrics = lyricItems(lyricsSection);
   const explicitLyrics = lyricPairs(text);
   const context = markdownParagraphs(contextSection);
   const grammar = grammarItems(grammarSection);
@@ -499,7 +551,7 @@ export function parseImportedLesson(
     level: field(text, ["程度", "級別", "level"]) || "未分類",
     publishedAt: new Date().toISOString().slice(0, 10),
     youtubeId: parseYoutubeId(field(text, ["YouTube", "youtubeId"])),
-    tags: tags.length ? tags : ["匯入"],
+    tags,
     summary:
       field(text, ["簡介", "摘要", "summary"]) ||
       context[0] ||

@@ -5,6 +5,7 @@ import {
   parseImportedLesson,
   parseYoutubeId,
 } from "../app/import-parser";
+import { vocabularySortKey } from "../app/song-data";
 
 const pasted = `# 《春の道》日文歌詞學習材料
 
@@ -97,6 +98,11 @@ test("accepts different heading levels, bold metadata, and list examples", () =>
 **猫が好き**
 我喜歡貓。
 
+**猫の手は痛い**
+貓掌令人覺得痛。
+
+這兩句一起描寫主角又喜歡貓、又拿牠沒辦法的矛盾心情。
+
 # 三、背景與情境
 
 這是一首關於貓的歌。
@@ -140,7 +146,8 @@ test("accepts different heading levels, bold metadata, and list examples", () =>
 適用情境：談論喜好。`;
   const song = parseImportedLesson(flexible);
   assert.equal(song.title, "猫の歌");
-  assert.equal(song.lyrics.length, 1);
+  assert.equal(song.lyrics.length, 2);
+  assert.match(song.lyrics[1].note ?? "", /這兩句一起描寫/);
   assert.equal(song.grammar[0].source, "猫が好き");
   assert.equal(song.grammar[0].examples.length, 1);
   assert.equal(song.vocabulary.length, 1);
@@ -179,6 +186,20 @@ test("accepts common YouTube URL formats only", () => {
     "dQw4w9WgXcQ",
   );
   assert.equal(parseYoutubeId("https://example.com/?v=dQw4w9WgXcQ"), null);
+});
+
+test("sorts kana-only and kanji vocabulary together by reading", () => {
+  const words = [
+    { term: "猫", reading: "ねこ" },
+    { term: "おてて", reading: "" },
+    { term: "愛", reading: "あい" },
+  ].sort((left, right) =>
+    vocabularySortKey(left).localeCompare(vocabularySortKey(right), "ja"),
+  );
+  assert.deepEqual(
+    words.map((word) => word.term),
+    ["愛", "おてて", "猫"],
+  );
 });
 
 test("removes the unneeded eight-angles block from the site", async () => {
