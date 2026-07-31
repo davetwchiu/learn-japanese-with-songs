@@ -153,6 +153,8 @@ test("accepts different heading levels, bold metadata, and list examples", () =>
   assert.equal(song.lyrics.length, 2);
   assert.equal(song.lyrics[0].jp, "[猫]{ねこ}が好き");
   assert.match(song.lyrics[1].note ?? "", /這兩句一起描寫/);
+  assert.equal(song.grammar[0].pattern, "～が好き");
+  assert.equal(song.grammar[0].meaning, "喜歡……");
   assert.equal(song.grammar[0].source, "猫が好き");
   assert.equal(song.grammar[0].examples.length, 1);
   assert.equal(song.vocabulary.length, 1);

@@ -505,8 +505,9 @@ export function SongView({ slug }: { slug: string }) {
                     key={item.id}
                   >
                     <div className="grammar-title">
-                      <h3>{item.pattern}</h3>
-                      <span>{item.meaning}</span>
+                      <h3>
+                        {[item.pattern, item.meaning].filter(Boolean).join("・")}
+                      </h3>
                     </div>
                     <blockquote>
                       <RubyText>{item.source}</RubyText>

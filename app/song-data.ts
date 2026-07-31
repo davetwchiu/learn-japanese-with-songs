@@ -58,6 +58,20 @@ export function vocabularySortKey(
     );
 }
 
+export function normalizeGrammarHeading(grammar: Grammar): Grammar {
+  const item = (grammar ?? {}) as Grammar;
+  const pattern = String(item.pattern ?? "").trim();
+  const meaning = String(item.meaning ?? "").trim();
+  const cleanPattern =
+    meaning && pattern.length > meaning.length && pattern.endsWith(meaning)
+      ? pattern
+          .slice(0, -meaning.length)
+          .replace(/[：:・·—–-]+\s*$/u, "")
+          .trim()
+      : pattern;
+  return { ...item, pattern: cleanPattern, meaning };
+}
+
 export function normalizeSong(value: unknown): Song {
   const song = (value ?? {}) as Partial<Song>;
   return {
@@ -74,7 +88,9 @@ export function normalizeSong(value: unknown): Song {
     summary: String(song.summary ?? "").trim(),
     lyrics: Array.isArray(song.lyrics) ? song.lyrics : [],
     context: Array.isArray(song.context) ? song.context.map(String) : [],
-    grammar: Array.isArray(song.grammar) ? song.grammar : [],
+    grammar: Array.isArray(song.grammar)
+      ? song.grammar.map(normalizeGrammarHeading)
+      : [],
     vocabulary: Array.isArray(song.vocabulary) ? song.vocabulary : [],
     spoken: Array.isArray(song.spoken) ? song.spoken : [],
     pitfalls: Array.isArray(song.pitfalls) ? song.pitfalls : [],

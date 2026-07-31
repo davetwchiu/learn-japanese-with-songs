@@ -843,21 +843,15 @@ rt {
 }
 
 .grammar-title {
-  align-items: baseline;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
+  display: block;
 }
 
 .grammar-title h3 {
   color: var(--red);
   font-family: var(--serif);
   font-size: 30px;
+  line-height: 1.45;
   margin: 0;
-}
-
-.grammar-title span {
-  font-weight: 800;
 }
 
 .grammar-card blockquote {
