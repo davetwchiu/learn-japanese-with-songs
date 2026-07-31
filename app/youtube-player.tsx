@@ -177,6 +177,18 @@ export function YouTubePlayer({
       setResumePrompt(true);
     }
 
+    function confirmPlaying() {
+      if (!active) return;
+      window.clearTimeout(checkTimer);
+      if (document.visibilityState === "visible") {
+        lastVisiblePlaying.current = true;
+      }
+      resumeIntent.current = false;
+      resumeAttempt.current = false;
+      setResumePrompt(false);
+      clearStoredResume();
+    }
+
     function verifyResumeSoon() {
       window.clearTimeout(checkTimer);
       checkTimer = window.setTimeout(() => {
@@ -184,7 +196,7 @@ export function YouTubePlayer({
         if (playerRef.current.getPlayerState() !== PLAYER_PLAYING) {
           showManualResume();
         } else {
-          resumeAttempt.current = false;
+          confirmPlaying();
         }
       }, 1_800);
     }
@@ -247,12 +259,23 @@ export function YouTubePlayer({
       if (document.visibilityState === "hidden") {
         rememberPlayback();
       } else {
-        tryResume();
+        resumeOnReturn();
       }
     }
 
-    function onPageShow() {
+    function resumeOnReturn() {
+      if (
+        document.visibilityState !== "visible" ||
+        !storedOrPendingResume()
+      ) {
+        return;
+      }
+      setResumePrompt(true);
       tryResume();
+    }
+
+    function onPageShow() {
+      resumeOnReturn();
     }
 
     manualResumeRef.current = () => {
@@ -273,6 +296,7 @@ export function YouTubePlayer({
     };
 
     document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", onPageShow);
     window.addEventListener("pagehide", rememberPlayback);
     window.addEventListener("pageshow", onPageShow);
 
@@ -288,20 +312,17 @@ export function YouTubePlayer({
               if (saved) {
                 resumeIntent.current = true;
                 lastTime.current = saved.time;
-                tryResume();
+                resumeOnReturn();
               }
             },
             onStateChange(event) {
               if (!active) return;
               if (event.data === PLAYER_PLAYING) {
-                if (document.visibilityState === "visible") {
-                  lastVisiblePlaying.current = true;
+                if (resumeIntent.current || resumeAttempt.current) {
+                  verifyResumeSoon();
+                } else {
+                  confirmPlaying();
                 }
-                window.clearTimeout(checkTimer);
-                resumeIntent.current = false;
-                resumeAttempt.current = false;
-                setResumePrompt(false);
-                clearStoredResume();
               } else if (event.data === PLAYER_ENDED) {
                 window.clearTimeout(checkTimer);
                 lastVisiblePlaying.current = false;
@@ -338,6 +359,7 @@ export function YouTubePlayer({
       active = false;
       window.clearTimeout(checkTimer);
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", onPageShow);
       window.removeEventListener("pagehide", rememberPlayback);
       window.removeEventListener("pageshow", onPageShow);
       manualResumeRef.current = () => undefined;

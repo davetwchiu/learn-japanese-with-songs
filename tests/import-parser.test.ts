@@ -325,6 +325,7 @@ test("resumes YouTube playback after returning from another app", async () => {
   assert.match(client, /<YouTubePlayer/);
   assert.match(player, /enablejsapi/);
   assert.match(player, /visibilitychange/);
+  assert.match(player, /addEventListener\("focus", onPageShow\)/);
   assert.match(player, /pagehide/);
   assert.match(player, /sessionStorage/);
   assert.match(player, /playVideo\(\)/);
@@ -337,6 +338,18 @@ test("resumes YouTube playback after returning from another app", async () => {
   assert.match(
     player,
     /resumeIntent\.current \|\| resumeAttempt\.current/,
+  );
+  assert.match(
+    player,
+    /event\.data === PLAYER_PLAYING[\s\S]*?resumeIntent\.current \|\| resumeAttempt\.current[\s\S]*?verifyResumeSoon\(\)/,
+  );
+  assert.match(
+    player,
+    /function verifyResumeSoon\(\)[\s\S]*?getPlayerState\(\) !== PLAYER_PLAYING[\s\S]*?confirmPlaying\(\)/,
+  );
+  assert.match(
+    player,
+    /function resumeOnReturn\(\)[\s\S]*?setResumePrompt\(true\)[\s\S]*?tryResume\(\)/,
   );
   assert.match(player, /className="floating-player-resume"/);
   assert.match(player, /data-visible=\{resumePrompt/);
