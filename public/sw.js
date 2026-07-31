@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "uta-nihongo-offline-";
-const CACHE_NAME = `${CACHE_PREFIX}v1`;
+const CACHE_NAME = `${CACHE_PREFIX}v2`;
 const CORE_URLS = [
   "/",
   "/grammar",
@@ -43,7 +43,22 @@ async function cacheFirst(request) {
     if (response.ok) await cache.put(request, response.clone());
     return response;
   } catch {
-    if (request.mode !== "navigate") return Response.error();
+    return Response.error();
+  }
+}
+
+async function networkFirstNavigation(request) {
+  const cache = await caches.open(CACHE_NAME);
+  try {
+    const response = await fetch(request);
+    if (response.ok) await cache.put(request, response.clone());
+    return response;
+  } catch {
+    const cached = await cache.match(request, {
+      ignoreSearch: true,
+      ignoreVary: true,
+    });
+    if (cached) return cached;
     return new Response(
       `<!doctype html><html lang="zh-HK"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>課文尚未下載</title><body><main><h1>這首課文尚未下載</h1><p>請連接網絡後返回目錄，按「更新」再試。</p><p><a href="/">返回歌曲目錄</a></p></main></body></html>`,
       {
@@ -88,6 +103,11 @@ self.addEventListener("fetch", (event) => {
 
   if (request.headers.get("X-Uta-Refresh") === "1") {
     event.respondWith(fetch(request));
+    return;
+  }
+
+  if (request.mode === "navigate") {
+    event.respondWith(networkFirstNavigation(request));
     return;
   }
 

@@ -172,8 +172,21 @@ export function YouTubePlayer({
 
     function showManualResume() {
       if (!active) return;
+      window.clearTimeout(checkTimer);
       resumeAttempt.current = false;
       setResumePrompt(true);
+    }
+
+    function verifyResumeSoon() {
+      window.clearTimeout(checkTimer);
+      checkTimer = window.setTimeout(() => {
+        if (!active || !playerRef.current) return;
+        if (playerRef.current.getPlayerState() !== PLAYER_PLAYING) {
+          showManualResume();
+        } else {
+          resumeAttempt.current = false;
+        }
+      }, 1_800);
     }
 
     function tryResume() {
@@ -198,17 +211,7 @@ export function YouTubePlayer({
         showManualResume();
         return;
       }
-
-      window.clearTimeout(checkTimer);
-      checkTimer = window.setTimeout(() => {
-        if (!active || !playerRef.current) return;
-        const state = playerRef.current.getPlayerState();
-        if (state !== PLAYER_PLAYING && state !== PLAYER_BUFFERING) {
-          showManualResume();
-        } else {
-          resumeAttempt.current = false;
-        }
-      }, 1_200);
+      verifyResumeSoon();
     }
 
     function rememberPlayback() {
@@ -256,11 +259,14 @@ export function YouTubePlayer({
       const player = playerRef.current;
       const saved = storedOrPendingResume();
       if (!player || !saved) return;
+      resumeIntent.current = true;
       resumeAttempt.current = true;
+      lastTime.current = saved.time;
       try {
         if (saved.time > 0) player.seekTo(saved.time, true);
         player.playVideo();
         setResumePrompt(false);
+        verifyResumeSoon();
       } catch {
         showManualResume();
       }
@@ -291,11 +297,13 @@ export function YouTubePlayer({
                 if (document.visibilityState === "visible") {
                   lastVisiblePlaying.current = true;
                 }
+                window.clearTimeout(checkTimer);
                 resumeIntent.current = false;
                 resumeAttempt.current = false;
                 setResumePrompt(false);
                 clearStoredResume();
               } else if (event.data === PLAYER_ENDED) {
+                window.clearTimeout(checkTimer);
                 lastVisiblePlaying.current = false;
                 resumeIntent.current = false;
                 resumeAttempt.current = false;
@@ -303,13 +311,17 @@ export function YouTubePlayer({
                 clearStoredResume();
               } else if (
                 event.data === PLAYER_PAUSED &&
-                document.visibilityState === "visible" &&
-                !resumeAttempt.current
+                document.visibilityState === "visible"
               ) {
-                lastVisiblePlaying.current = false;
-                resumeIntent.current = false;
-                setResumePrompt(false);
-                clearStoredResume();
+                if (resumeIntent.current || resumeAttempt.current) {
+                  showManualResume();
+                } else {
+                  window.clearTimeout(checkTimer);
+                  lastVisiblePlaying.current = false;
+                  resumeIntent.current = false;
+                  setResumePrompt(false);
+                  clearStoredResume();
+                }
               }
             },
             onAutoplayBlocked() {

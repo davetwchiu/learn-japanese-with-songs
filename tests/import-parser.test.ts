@@ -279,14 +279,21 @@ test("removes the unneeded eight-angles block from the site", async () => {
 });
 
 test("includes offline learning support and a manual update control", async () => {
-  const [worker, client, layout, manifest] = await Promise.all([
+  const [worker, client, login, layout, manifest] = await Promise.all([
     readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
     readFile(new URL("../app/site-client.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/login-client.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../public/site.webmanifest", import.meta.url), "utf8"),
   ]);
   assert.match(worker, /CACHE_URLS/);
-  assert.doesNotMatch(worker, /networkFirst/);
+  assert.match(worker, /\$\{CACHE_PREFIX\}v2/);
+  assert.match(worker, /networkFirstNavigation/);
+  assert.match(worker, /request\.mode === "navigate"/);
+  assert.match(
+    worker,
+    /event\.respondWith\(networkFirstNavigation\(request\)\)/,
+  );
   assert.match(worker, /event\.respondWith\(cacheFirst\(request\)\)/);
   assert.match(worker, /Promise\.all/);
   assert.match(worker, /ignoreVary:\s*true/);
@@ -298,6 +305,9 @@ test("includes offline learning support and a manual update control", async () =
   assert.match(client, /isAppleMobileDevice/);
   assert.match(client, /registration\.unregister/);
   assert.match(client, /更新離線學習內容/);
+  assert.match(login, /clearCachedLoginDocuments/);
+  assert.match(login, /cache\.delete/);
+  assert.match(login, /window\.location\.reload/);
   assert.match(
     await readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     /@supports \(-webkit-touch-callout: none\)/,
@@ -319,6 +329,15 @@ test("resumes YouTube playback after returning from another app", async () => {
   assert.match(player, /sessionStorage/);
   assert.match(player, /playVideo\(\)/);
   assert.match(player, /onAutoplayBlocked/);
+  assert.match(player, /getPlayerState\(\) !== PLAYER_PLAYING/);
+  assert.doesNotMatch(
+    player,
+    /state !== PLAYER_PLAYING && state !== PLAYER_BUFFERING/,
+  );
+  assert.match(
+    player,
+    /resumeIntent\.current \|\| resumeAttempt\.current/,
+  );
   assert.match(player, /className="floating-player-resume"/);
   assert.match(player, /data-visible=\{resumePrompt/);
   assert.match(player, /繼續播放/);

@@ -2,6 +2,31 @@
 
 import { useState, type FormEvent } from "react";
 
+const OFFLINE_CACHE_PREFIX = "uta-nihongo-offline-";
+
+async function clearCachedLoginDocuments() {
+  if (!("caches" in window)) return;
+  try {
+    const names = (await caches.keys()).filter((name) =>
+      name.startsWith(OFFLINE_CACHE_PREFIX),
+    );
+    const urls = [
+      window.location.href,
+      new URL("/", window.location.origin).href,
+    ];
+    await Promise.all(
+      names.map(async (name) => {
+        const cache = await caches.open(name);
+        await Promise.all(
+          urls.map((url) => cache.delete(url, { ignoreSearch: true })),
+        );
+      }),
+    );
+  } catch {
+    // Continue after login even when old offline HTML cannot be removed.
+  }
+}
+
 export function LoginView() {
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
@@ -19,6 +44,7 @@ export function LoginView() {
       });
       const result = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(result.error ?? "密碼不正確。");
+      await clearCachedLoginDocuments();
       window.location.reload();
     } catch (error) {
       setStatus("error");
