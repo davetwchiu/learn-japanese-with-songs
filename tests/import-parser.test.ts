@@ -147,6 +147,7 @@ test("accepts different heading levels, bold metadata, and list examples", () =>
   const song = parseImportedLesson(flexible);
   assert.equal(song.title, "猫の歌");
   assert.equal(song.lyrics.length, 2);
+  assert.equal(song.lyrics[0].jp, "[猫]{ねこ}が好き");
   assert.match(song.lyrics[1].note ?? "", /這兩句一起描寫/);
   assert.equal(song.grammar[0].source, "猫が好き");
   assert.equal(song.grammar[0].examples.length, 1);
@@ -186,6 +187,26 @@ test("accepts common YouTube URL formats only", () => {
     "dQw4w9WgXcQ",
   );
   assert.equal(parseYoutubeId("https://example.com/?v=dQw4w9WgXcQ"), null);
+});
+
+test("adds ruby to common inflected vocabulary in imported lyrics", () => {
+  const song = parseImportedLesson(`# 《活用の歌》日文歌詞學習材料
+
+## 二、逐句日中對照翻譯
+
+**彼女を求めて、気に入らない**
+尋找她，卻不合心意。
+
+## 五、生字及假名讀音
+
+| 生字 | 詞性／中文意思 | 用法或例句 |
+| --- | --- | --- |
+| 求める（もとめる） | 動詞；尋求 | 答えを求める。 |
+| 気に入る（きにいる） | 慣用語；喜歡 | この歌が気に入る。 |`);
+  assert.equal(
+    song.lyrics[0].jp,
+    "彼女を[求]{もと}めて、[気]{き}に[入]{い}らない",
+  );
 });
 
 test("sorts kana-only and kanji vocabulary together by reading", () => {

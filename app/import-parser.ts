@@ -405,6 +405,134 @@ function vocabularyItems(value: string): Song["vocabulary"] {
     });
 }
 
+function rubyMarkup(surface: string, reading: string): string | null {
+  const tokens =
+    surface.match(/[\p{Script=Han}々〆ヶ]+|[ぁ-ゖァ-ヺー]+/gu) ?? [];
+  if (!tokens.length || tokens.join("") !== surface) return null;
+
+  let cursor = 0;
+  let markup = "";
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (/^[\p{Script=Han}々〆ヶ]+$/u.test(token)) {
+      const next = tokens[index + 1];
+      const boundary =
+        next && /^[ぁ-ゖァ-ヺー]+$/u.test(next)
+          ? reading.indexOf(next, cursor)
+          : reading.length;
+      if (boundary <= cursor) return null;
+      markup += `[${token}]{${reading.slice(cursor, boundary)}}`;
+      cursor = boundary;
+    } else {
+      if (!reading.startsWith(token, cursor)) return null;
+      markup += token;
+      cursor += token.length;
+    }
+  }
+  return cursor === reading.length ? markup : null;
+}
+
+function rubyTargets(vocabulary: Song["vocabulary"]): {
+  surface: string;
+  markup: string;
+  stem: boolean;
+}[] {
+  const targets = new Map<
+    string,
+    { surface: string; markup: string; stem: boolean }
+  >();
+  for (const word of vocabulary) {
+    const surface = word.term.trim();
+    const reading = word.reading.trim();
+    if (!reading || !/[\p{Script=Han}々〆ヶ]/u.test(surface)) continue;
+
+    const fullMarkup = rubyMarkup(surface, reading);
+    if (fullMarkup) {
+      targets.set(`full:${surface}`, {
+        surface,
+        markup: fullMarkup,
+        stem: false,
+      });
+    }
+
+    const ending = surface.at(-1) ?? "";
+    if (
+      /^[うくぐすつぬぶむるい]$/u.test(ending) &&
+      reading.endsWith(ending)
+    ) {
+      const stemSurface = surface.slice(0, -1);
+      const stemReading = reading.slice(0, -1);
+      const stemMarkup = rubyMarkup(stemSurface, stemReading);
+      if (stemMarkup && /[\p{Script=Han}々〆ヶ]/u.test(stemSurface)) {
+        targets.set(`stem:${stemSurface}`, {
+          surface: stemSurface,
+          markup: stemMarkup,
+          stem: true,
+        });
+      }
+    }
+  }
+  return [...targets.values()].sort(
+    (left, right) => right.surface.length - left.surface.length,
+  );
+}
+
+function addRubyToJapanese(
+  value: string,
+  vocabulary: Song["vocabulary"],
+): string {
+  if (
+    /\[[^\]]+\]\{[^}]+\}|[\p{Script=Han}々〆ヶ]+[（(][ぁ-ゖァ-ヺー・]+[）)]/u.test(
+      value,
+    )
+  ) {
+    return value;
+  }
+
+  const matches: {
+    start: number;
+    end: number;
+    markup: string;
+  }[] = [];
+  for (const target of rubyTargets(vocabulary)) {
+    const escaped = target.surface.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const expression = new RegExp(
+      `${escaped}${target.stem ? "(?=[ぁ-ゖァ-ヺー])" : ""}`,
+      "gu",
+    );
+    for (const match of value.matchAll(expression)) {
+      matches.push({
+        start: match.index!,
+        end: match.index! + target.surface.length,
+        markup: target.markup,
+      });
+    }
+  }
+
+  matches.sort(
+    (left, right) =>
+      left.start - right.start || right.end - right.start - (left.end - left.start),
+  );
+  let cursor = 0;
+  let result = "";
+  for (const match of matches) {
+    if (match.start < cursor) continue;
+    result += value.slice(cursor, match.start) + match.markup;
+    cursor = match.end;
+  }
+  return result + value.slice(cursor);
+}
+
+function addRubyToLyrics(
+  lyrics: Song["lyrics"],
+  vocabulary: Song["vocabulary"],
+): Song["lyrics"] {
+  return lyrics.map((line) => ({
+    ...line,
+    jp: addRubyToJapanese(line.jp, vocabulary),
+  }));
+}
+
 function spokenItems(value: string): Song["spoken"] {
   return markdownChunks(value).map(({ title, body }) => {
     const paragraphs = markdownParagraphs(body);
@@ -485,7 +613,11 @@ export function parseImportedLesson(
     if (!isSong(value)) {
       throw new Error("JSON 缺少歌曲名稱、slug 或課文內容。");
     }
-    return normalizeSong(value);
+    const song = normalizeSong(value);
+    return {
+      ...song,
+      lyrics: addRubyToLyrics(song.lyrics, song.vocabulary),
+    };
   } catch (error) {
     if (
       unfenced.trimStart().startsWith("{") ||
@@ -556,7 +688,10 @@ export function parseImportedLesson(
       field(text, ["簡介", "摘要", "summary"]) ||
       context[0] ||
       "由匯入內容建立的課文。",
-    lyrics: parsedLyrics.length ? parsedLyrics : explicitLyrics,
+    lyrics: addRubyToLyrics(
+      parsedLyrics.length ? parsedLyrics : explicitLyrics,
+      vocabulary,
+    ),
     context,
     grammar,
     vocabulary,
