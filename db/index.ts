@@ -65,3 +65,8 @@ export async function saveStoredSong(song: Song): Promise<void> {
     .bind(song.slug, JSON.stringify(song), now, now)
     .run();
 }
+
+export async function deleteStoredSong(slug: string): Promise<void> {
+  const db = await readyDb();
+  await db.prepare("DELETE FROM songs WHERE slug = ?").bind(slug).run();
+}

@@ -1304,6 +1304,21 @@ rt {
   padding: clamp(24px, 5vw, 52px);
 }
 
+.import-panel form > label {
+  display: block;
+}
+
+.import-panel form > label + label {
+  margin-top: 24px;
+}
+
+.import-panel form > label > small {
+  color: var(--ink-soft);
+  display: block;
+  font-size: 12px;
+  margin-top: 7px;
+}
+
 .import-panel textarea {
   line-height: 1.7;
   min-height: 390px;

@@ -46,10 +46,10 @@ function htmlToText(value: string): string {
 
 function field(text: string, names: string[]): string {
   const escaped = names.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  return (
+  return cleanMarkdown(
     text.match(
       new RegExp(`^(?:${escaped.join("|")})\\s*[：:]\\s*(.+)$`, "im"),
-    )?.[1]?.trim() ?? ""
+    )?.[1]?.trim() ?? "",
   );
 }
 
@@ -68,19 +68,6 @@ function stableSlug(title: string): string {
   return `lesson-${(hash >>> 0).toString(36)}`;
 }
 
-function section(
-  text: string,
-  start: RegExp,
-  end: RegExp,
-): string {
-  const startMatch = start.exec(text);
-  if (!startMatch) return "";
-  const contentStart = startMatch.index + startMatch[0].length;
-  const remaining = text.slice(contentStart);
-  const endMatch = end.exec(remaining);
-  return remaining.slice(0, endMatch?.index ?? remaining.length).trim();
-}
-
 function cleanMarkdown(value: string): string {
   return value
     .replace(/^#{1,6}\s+/gm, "")
@@ -91,22 +78,134 @@ function cleanMarkdown(value: string): string {
     .trim();
 }
 
+type LessonSection =
+  | "details"
+  | "lyrics"
+  | "context"
+  | "grammar"
+  | "vocabulary"
+  | "spoken"
+  | "pitfalls"
+  | "phrases"
+  | "summary";
+
+function sectionName(value: string): LessonSection | null {
+  const title = cleanMarkdown(value)
+    .replace(
+      /^(?:第)?(?:[一二三四五六七八九十百]+|\d+)(?:章|部分)?[、.．:：)\s]+/,
+      "",
+    )
+    .trim();
+  if (/^(?:歌曲?|課文)?資料(?:及介紹)?$/.test(title)) return "details";
+  if (
+    /^(?:逐句.*(?:翻譯|對照)|(?:日中|中日).*對照|歌詞.*翻譯)/.test(title)
+  ) {
+    return "lyrics";
+  }
+  if (
+    /^(?:歌曲?)?(?:內容|情境|背景|故事|主題).*(?:情境|背景|解讀|分析)?$/.test(
+      title,
+    )
+  ) {
+    return "context";
+  }
+  if (/^(?:日文)?文法(?:重點|解析|分析|學習)?$/.test(title)) {
+    return "grammar";
+  }
+  if (/^(?:生字|詞彙|單字)(?:及|與|和)?.*$/.test(title)) {
+    return "vocabulary";
+  }
+  if (
+    /^(?:(?:擬聲詞|擬態詞).*(?:口語|表達|用法)|口語(?:表達|用法|語感)?)$/.test(
+      title,
+    )
+  ) {
+    return "spoken";
+  }
+  if (/^(?:容易誤解|易錯|常見錯誤|翻譯陷阱|注意事項)/.test(title)) {
+    return "pitfalls";
+  }
+  if (/^(?:值得背|實用句|實用表達|常用句)/.test(title)) {
+    return "phrases";
+  }
+  if (/^(?:總結|結語|小結)$/.test(title)) return "summary";
+  return null;
+}
+
+function lessonSections(text: string): Partial<Record<LessonSection, string>> {
+  const headings = [...text.matchAll(/^.{1,80}$/gm)]
+    .map((match) => {
+      const line = match[0].trim();
+      const headingLike =
+        /^#{1,6}\s+/.test(line) ||
+        /^(?:第)?(?:[一二三四五六七八九十百]+|\d+)(?:章|部分)?[、.．)]\s*/.test(
+          line,
+        ) ||
+        (line.length <= 30 && !/[，。！？：:；;]/.test(line));
+      return {
+        index: match.index!,
+        end: match.index! + match[0].length,
+        kind: headingLike ? sectionName(line) : null,
+      };
+    })
+    .filter(
+      (
+        heading,
+      ): heading is { index: number; end: number; kind: LessonSection } =>
+        Boolean(heading.kind),
+    );
+  const sections: Partial<Record<LessonSection, string>> = {};
+  headings.forEach((heading, index) => {
+    sections[heading.kind] = text
+      .slice(heading.end, headings[index + 1]?.index ?? text.length)
+      .trim();
+  });
+  return sections;
+}
+
+function pairLine(value: string): string {
+  return cleanMarkdown(
+    value
+      .trim()
+      .replace(/^[*+-]\s+/, "")
+      .replace(/^(?:日|日文|原文|中|中文|翻譯|譯文)\s*[：:]\s*/i, ""),
+  );
+}
+
+function looksJapanese(value: string): boolean {
+  return /[ぁ-ゖァ-ヺー々〆ヶ]/u.test(value);
+}
+
 function markdownPairs(value: string): { jp: string; zh: string }[] {
   const lines = value.split("\n");
   const pairs: { jp: string; zh: string }[] = [];
   for (let index = 0; index < lines.length; index += 1) {
-    const japanese = lines[index].trim().match(/^\*\*(.+)\*\*$/)?.[1]?.trim();
-    if (!japanese) continue;
+    const sourceLine = lines[index].trim();
+    const marked =
+      /\*\*.+\*\*/.test(sourceLine) ||
+      /^[*+-]\s+/.test(sourceLine) ||
+      /^(?:日|日文|原文)\s*[：:]/i.test(sourceLine);
+    const japanese = pairLine(sourceLine);
+    if (
+      !marked ||
+      !japanese ||
+      !looksJapanese(japanese) ||
+      /^(?:#{1,6}\s|---|\|)/.test(sourceLine)
+    ) {
+      continue;
+    }
     for (let next = index + 1; next < lines.length; next += 1) {
       const translation = lines[next].trim();
       if (!translation) continue;
       if (
-        /^(?:#{1,6}\s|>|---|\*\*)/.test(translation) ||
-        /^\|/.test(translation)
+        /^(?:#{1,6}\s|---|\|)/.test(translation) ||
+        (looksJapanese(pairLine(translation)) &&
+          (/\*\*.+\*\*/.test(translation) ||
+            /^[*+-]\s+/.test(translation)))
       ) {
         break;
       }
-      pairs.push({ jp: japanese, zh: cleanMarkdown(translation) });
+      pairs.push({ jp: japanese, zh: pairLine(translation) });
       index = next;
       break;
     }
@@ -117,6 +216,7 @@ function markdownPairs(value: string): { jp: string; zh: string }[] {
 function markdownParagraphs(value: string): string[] {
   return value
     .split(/\n\s*\n/)
+    .filter((paragraph) => !/^#{1,6}\s+.+\s*$/.test(paragraph.trim()))
     .map(cleanMarkdown)
     .filter(
       (paragraph) =>
@@ -129,9 +229,15 @@ function markdownParagraphs(value: string): string[] {
 function markdownChunks(
   value: string,
 ): { title: string; body: string }[] {
-  const headings = [...value.matchAll(/^###\s+(?:\d+\.\s*)?(.+)$/gm)];
+  const allHeadings = [
+    ...value.matchAll(/^(#{2,6})\s+((?:\d+[.)．]\s*)?.+)$/gm),
+  ];
+  const numbered = allHeadings.filter((heading) =>
+    /^\d+[.)．]\s*/.test(heading[2]),
+  );
+  const headings = numbered.length ? numbered : allHeadings;
   return headings.map((heading, index) => ({
-    title: heading[1].trim(),
+    title: cleanMarkdown(heading[2].replace(/^\d+[.)．]\s*/, "")),
     body: value
       .slice(
         heading.index! + heading[0].length,
@@ -141,36 +247,62 @@ function markdownChunks(
   }));
 }
 
+function blockAfterLabel(value: string, label: string): string {
+  const labelMatch = new RegExp(`^${label}[：:][ \\t]*$`, "im").exec(value);
+  if (!labelMatch) return "";
+  return value
+    .slice(labelMatch.index + labelMatch[0].length)
+    .trimStart()
+    .split(/\n\s*\n/)[0]
+    .trim();
+}
+
+function withoutLabeledBlock(value: string, label: string): string {
+  const labelMatch = new RegExp(`^${label}[：:][ \\t]*$`, "im").exec(value);
+  if (!labelMatch) return value;
+  const remaining = value.slice(labelMatch.index + labelMatch[0].length);
+  const content = remaining.trimStart();
+  const blockLength =
+    content.match(/^[\s\S]*?(?=\n\s*\n|$)/)?.[0].length ?? content.length;
+  return (
+    value.slice(0, labelMatch.index) + content.slice(blockLength)
+  ).trim();
+}
+
 function grammarItems(value: string): Song["grammar"] {
   return markdownChunks(value).map(({ title, body }) => {
-    const examplesPart = body.split(/例句[：:]/i)[1] ?? "";
+    const examplesPart = body.split(/^例句[：:][ \t]*$/im)[1] ?? "";
     const examples = markdownPairs(examplesPart);
-    const sourceBlock =
-      body.match(/歌詞[：:]\s*((?:\n+\s*\*\*.+\*\*)+)/i)?.[1] ?? "";
-    const source = [...sourceBlock.matchAll(/^\s*\*\*(.+)\*\*\s*$/gm)]
-      .map((match) => match[1].trim())
-      .join("／");
-    const structureBlock =
-      body.match(/結構[：:]\s*((?:\n+\s*>[^\n]+)+)/i)?.[1] ?? "";
-    const structure = structureBlock
+    const labeledSource = blockAfterLabel(body, "歌詞");
+    const leadingBlock = body.trimStart().split(/\n\s*\n/)[0].trim();
+    const source = (labeledSource || leadingBlock)
       .split("\n")
-      .map((line) => line.replace(/^\s*>\s?/, "").trim())
-      .filter(Boolean)
-      .join("\n");
-    const paragraphs = markdownParagraphs(
-      body
-        .split(/例句[：:]/i)[0]
-        .replace(/歌詞[：:]\s*(?:\n+\s*\*\*.+\*\*)+/i, "")
-        .replace(/結構[：:]\s*(?:\n+\s*>[^\n]+)+/i, "")
-        .replace(/例句[：:][\s\S]*$/i, ""),
-    );
+      .map(pairLine)
+      .filter(
+        (line) => looksJapanese(line) && !/^(?:歌詞|例句)[：:]?$/.test(line),
+      )
+      .join("／");
+    const structure = cleanMarkdown(blockAfterLabel(body, "結構"));
+    let explanationSource = body.split(/^例句[：:][ \t]*$/im)[0];
+    if (labeledSource) {
+      explanationSource = withoutLabeledBlock(explanationSource, "歌詞");
+    } else if (source) {
+      explanationSource = explanationSource
+        .trimStart()
+        .slice(leadingBlock.length)
+        .trimStart();
+    }
+    explanationSource = withoutLabeledBlock(explanationSource, "結構");
+    const paragraphs = markdownParagraphs(explanationSource);
     const explanation = paragraphs.join("\n\n") || "詳見歌詞中的實際用法。";
     const inlineMeaning = title.split(/[：:]/).slice(1).join("：").trim();
+    const labeledMeaning = field(body, ["意思", "中文意思"]);
     return {
       id: stableSlug(title),
       pattern: title,
       meaning:
         inlineMeaning ||
+        labeledMeaning ||
         paragraphs[0]?.split(/[。；\n]/)[0] ||
         "文法及語感重點",
       source,
@@ -182,6 +314,7 @@ function grammarItems(value: string): Song["grammar"] {
 }
 
 function vocabularyItems(value: string): Song["vocabulary"] {
+  const seen = new Map<string, number>();
   return value
     .split("\n")
     .filter((line) => /^\|.+\|$/.test(line.trim()))
@@ -189,24 +322,33 @@ function vocabularyItems(value: string): Song["vocabulary"] {
     .filter(
       (cells) =>
         cells.length >= 3 &&
-        !/^(?:生字|-+)$/.test(cells[0]) &&
+        !/^(?:生字|詞彙|單字|-+)$/.test(cleanMarkdown(cells[0])) &&
         !/^[-:\s]+$/.test(cells.join("")),
     )
-    .map(([entry, description, example]) => {
+    .map(([rawEntry, rawDescription, rawExample]) => {
+      const entry = cleanMarkdown(rawEntry);
+      const description = cleanMarkdown(rawDescription);
+      const example = cleanMarkdown(rawExample);
       const reading = entry.match(/[（(]([^）)]+)[）)]/)?.[1] ?? "";
       const term = entry.replace(/[（(][^）)]+[）)]/, "").trim();
       const [partOfSpeech, meaning] = description
         .split(/[；;]/)
         .map((part) => part.trim());
+      const baseId = stableSlug(`${term}-${reading}`);
+      const occurrence = (seen.get(baseId) ?? 0) + 1;
+      seen.set(baseId, occurrence);
+      const exampleParts = looksJapanese(example)
+        ? example.match(/^(.+?[。！？])\s*(.+)$/)
+        : null;
       return {
-        id: stableSlug(`${term}-${reading}`),
+        id: occurrence === 1 ? baseId : `${baseId}-${occurrence}`,
         term,
         reading,
         partOfSpeech: partOfSpeech || "詞語",
         meaning: meaning || description,
-        note: "",
-        exampleJp: example,
-        exampleZh: "",
+        note: looksJapanese(example) ? "" : example,
+        exampleJp: exampleParts?.[1] ?? (looksJapanese(example) ? example : ""),
+        exampleZh: exampleParts?.[2] ?? "",
       };
     });
 }
@@ -234,23 +376,30 @@ function pitfallItems(value: string): Song["pitfalls"] {
 function phraseItems(value: string): Song["phrases"] {
   return markdownChunks(value).map(({ title, body }) => ({
     jp:
-      [...body.matchAll(/^\*\*(.+)\*\*$/gm)][0]?.[1]?.trim() ??
-      title.replace(/^\d+\.\s*/, ""),
-    zh: body.match(/^中文[：:]\s*(.+)$/m)?.[1]?.trim() ?? "",
-    when: body.match(/^情境[：:]\s*(.+)$/m)?.[1]?.trim() ?? "",
+      [...body.matchAll(/^\s*(?:[*+-]\s+)?\*\*(.+)\*\*\s*$/gm)][0]?.[1]?.trim() ??
+      title,
+    zh:
+      body.match(/^(?:中文|翻譯|譯文)[：:]\s*(.+)$/m)?.[1]?.trim() ?? "",
+    when:
+      body.match(
+        /^(?:(?:適用|使用)?情境|適合場合|用途)[：:]\s*(.+)$/m,
+      )?.[1]?.trim() ?? "",
   }));
 }
 
-function youtubeId(value: string): string | null {
+export function parseYoutubeId(value: string): string | null {
   if (/^[\w-]{11}$/.test(value)) return value;
   try {
     const url = new URL(value);
-    if (url.hostname === "youtu.be") return url.pathname.slice(1) || null;
-    return (
-      url.searchParams.get("v") ??
-      url.pathname.match(/\/(?:embed|shorts)\/([\w-]{11})/)?.[1] ??
-      null
-    );
+    const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
+    const candidate =
+      hostname === "youtu.be"
+        ? url.pathname.split("/")[1]
+        : hostname === "youtube.com" || hostname.endsWith(".youtube.com")
+          ? (url.searchParams.get("v") ??
+            url.pathname.match(/\/(?:embed|shorts)\/([\w-]{11})/)?.[1])
+          : null;
+    return candidate && /^[\w-]{11}$/.test(candidate) ? candidate : null;
   } catch {
     return null;
   }
@@ -314,41 +463,14 @@ export function parseImportedLesson(
     .map((tag) => tag.trim())
     .filter(Boolean);
 
-  const lyricsSection = section(
-    text,
-    /^##\s+(?:一|1)[、.．]\s*逐句[^\n]*$/m,
-    /^##\s+(?:二|2)[、.．]/m,
-  );
-  const contextSection = section(
-    text,
-    /^##\s+(?:二|2)[、.．]\s*[^\n]+$/m,
-    /^##\s+(?:三|3)[、.．]/m,
-  );
-  const grammarSection = section(
-    text,
-    /^##\s+(?:三|3)[、.．]\s*[^\n]+$/m,
-    /^##\s+(?:四|4)[、.．]/m,
-  );
-  const vocabularySection = section(
-    text,
-    /^##\s+(?:四|4)[、.．]\s*[^\n]+$/m,
-    /^##\s+(?:五|5)[、.．]/m,
-  );
-  const spokenSection = section(
-    text,
-    /^##\s+(?:五|5)[、.．]\s*[^\n]+$/m,
-    /^##\s+(?:六|6)[、.．]/m,
-  );
-  const pitfallsSection = section(
-    text,
-    /^##\s+(?:六|6)[、.．]\s*[^\n]+$/m,
-    /^##\s+(?:七|7)[、.．]/m,
-  );
-  const phrasesSection = section(
-    text,
-    /^##\s+(?:七|7)[、.．]\s*[^\n]+$/m,
-    /$(?![\s\S])/,
-  );
+  const sections = lessonSections(text);
+  const lyricsSection = sections.lyrics ?? "";
+  const contextSection = sections.context ?? "";
+  const grammarSection = sections.grammar ?? "";
+  const vocabularySection = sections.vocabulary ?? "";
+  const spokenSection = sections.spoken ?? "";
+  const pitfallsSection = sections.pitfalls ?? "";
+  const phrasesSection = sections.phrases ?? "";
   const parsedLyrics = markdownPairs(lyricsSection);
   const explicitLyrics = lyricPairs(text);
   const context = markdownParagraphs(contextSection);
@@ -376,7 +498,7 @@ export function parseImportedLesson(
       field(text, ["歌", "歌手", "作者", "artist"]) || "匯入課文",
     level: field(text, ["程度", "級別", "level"]) || "未分類",
     publishedAt: new Date().toISOString().slice(0, 10),
-    youtubeId: youtubeId(field(text, ["YouTube", "youtubeId"])),
+    youtubeId: parseYoutubeId(field(text, ["YouTube", "youtubeId"])),
     tags: tags.length ? tags : ["匯入"],
     summary:
       field(text, ["簡介", "摘要", "summary"]) ||

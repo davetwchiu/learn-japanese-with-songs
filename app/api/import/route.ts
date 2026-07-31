@@ -1,6 +1,14 @@
-import { fetchImportUrl, parseImportedLesson } from "@/app/import-parser";
+import {
+  fetchImportUrl,
+  parseImportedLesson,
+  parseYoutubeId,
+} from "@/app/import-parser";
 import { requestIsAuthenticated } from "@/app/password-auth";
-import { saveStoredSong } from "@/db";
+import {
+  deleteStoredSong,
+  listStoredSongs,
+  saveStoredSong,
+} from "@/db";
 
 function sameOrigin(request: Request): boolean {
   const origin = request.headers.get("origin");
@@ -21,6 +29,7 @@ export async function POST(request: Request) {
       content?: string;
       fileName?: string;
       url?: string;
+      youtubeUrl?: string;
     };
     let content = payload.content ?? "";
     let sourceName = payload.fileName ?? "";
@@ -32,8 +41,28 @@ export async function POST(request: Request) {
     if (!["file", "paste", "url"].includes(payload.sourceType ?? "")) {
       return Response.json({ error: "請選擇匯入方法。" }, { status: 400 });
     }
-    const song = parseImportedLesson(content, sourceName);
+    const importedSong = parseImportedLesson(content, sourceName);
+    const suppliedYoutube = payload.youtubeUrl?.trim();
+    const videoId = suppliedYoutube ? parseYoutubeId(suppliedYoutube) : null;
+    if (suppliedYoutube && !videoId) {
+      return Response.json(
+        { error: "請輸入有效的 YouTube 網址。" },
+        { status: 400 },
+      );
+    }
+    const song = videoId
+      ? { ...importedSong, youtubeId: videoId }
+      : importedSong;
     await saveStoredSong(song);
+    const matchingTitle = (value: string) =>
+      value.replaceAll("**", "").trim() === song.title;
+    const duplicateSlugs = (await listStoredSongs())
+      .filter(
+        (stored) =>
+          stored.slug !== song.slug && matchingTitle(stored.title),
+      )
+      .map((stored) => stored.slug);
+    await Promise.all(duplicateSlugs.map(deleteStoredSong));
     return Response.json({ song }, { status: 201 });
   } catch (error) {
     return Response.json(

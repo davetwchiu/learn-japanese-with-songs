@@ -10,6 +10,7 @@ export function ImportView() {
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState("");
   const [text, setText] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [message, setMessage] = useState("");
 
@@ -30,6 +31,7 @@ export function ImportView() {
           content,
           fileName: file?.name,
           url,
+          youtubeUrl,
         }),
       });
       const result = (await response.json()) as {
@@ -116,11 +118,21 @@ export function ImportView() {
               </label>
             )}
 
+            <label>
+              <span>YouTube 影片（選填）</span>
+              <input
+                type="url"
+                value={youtubeUrl}
+                onChange={(event) => setYoutubeUrl(event.target.value)}
+                placeholder="https://www.youtube.com/watch?v=..."
+              />
+              <small>加入後可在課文頁一邊播放，一邊學習。</small>
+            </label>
+
             <div className="import-note-line">
               <strong>支援完整學習材料</strong>
               <p>
-                有「逐句翻譯、文法重點、生字、口語、容易誤解、實用句子」標題的文字會自動拆成相應部分；JSON
-                亦會保留完整索引資料。
+                章節名稱、編號、次序和標題層級可以略有不同；系統會按「歌詞翻譯、情境、文法、生字、口語、容易誤解、實用句子」的內容自動分類。
               </p>
             </div>
 
