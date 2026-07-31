@@ -14,6 +14,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { YouTubePlayer } from "./youtube-player";
 
 function RubyText({ children }: { children: string }) {
   const pattern =
@@ -446,22 +447,21 @@ export function SongView({ slug }: { slug: string }) {
               管理課文與影片 →
             </a>
           </div>
-          <div className="player-shell">
-            {song.youtubeId ? (
-              <iframe
-                src={`https://www.youtube-nocookie.com/embed/${song.youtubeId}`}
-                title={`${song.title} YouTube 播放器`}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              />
-            ) : (
+          {song.youtubeId ? (
+            <YouTubePlayer
+              key={song.youtubeId}
+              videoId={song.youtubeId}
+              title={song.title}
+            />
+          ) : (
+            <div className="player-shell">
               <div className="player-empty">
                 <span aria-hidden="true">▶</span>
                 <strong>暫未附上影片</strong>
                 <p>你仍可先閱讀本課的翻譯和學習重點。</p>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </header>
 
         <div className="lesson-layout">

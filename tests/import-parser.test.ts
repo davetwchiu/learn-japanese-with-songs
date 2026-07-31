@@ -305,3 +305,18 @@ test("includes offline learning support and a manual update control", async () =
   assert.match(layout, /site\.webmanifest/);
   assert.equal(JSON.parse(manifest).display, "standalone");
 });
+
+test("resumes YouTube playback after returning from another app", async () => {
+  const [client, player] = await Promise.all([
+    readFile(new URL("../app/site-client.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/youtube-player.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(client, /<YouTubePlayer/);
+  assert.match(player, /enablejsapi/);
+  assert.match(player, /visibilitychange/);
+  assert.match(player, /pagehide/);
+  assert.match(player, /sessionStorage/);
+  assert.match(player, /playVideo\(\)/);
+  assert.match(player, /onAutoplayBlocked/);
+  assert.match(player, /繼續播放/);
+});
