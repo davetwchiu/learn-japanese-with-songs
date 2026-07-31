@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import "./globals.css";
+import { isPasswordAuthenticated } from "./password-auth";
+import { LoginView } from "./login-client";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
@@ -39,14 +41,15 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const authenticated = await isPasswordAuthenticated();
   return (
     <html lang="zh-HK">
-      <body>{children}</body>
+      <body>{authenticated ? children : <LoginView />}</body>
     </html>
   );
 }

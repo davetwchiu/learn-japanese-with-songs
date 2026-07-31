@@ -4,11 +4,7 @@
 import {
   bundledSongs,
   fetchSong,
-  GITHUB_URL,
-  lastScannedAt,
-  loadCachedSongs,
-  mergeSongs,
-  scanGithubSongs,
+  loadSongLibrary,
   type Song,
 } from "./song-data";
 import {
@@ -17,11 +13,6 @@ import {
   useMemo,
   useState,
 } from "react";
-
-const dateFormatter = new Intl.DateTimeFormat("zh-HK", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
 
 function RubyText({ children }: { children: string }) {
   const pattern =
@@ -45,45 +36,26 @@ function RubyText({ children }: { children: string }) {
 
 function useLibrary() {
   const [songs, setSongs] = useState<Song[]>(bundledSongs);
-  const [lastScan, setLastScan] = useState<string | null>(null);
-  const [scanState, setScanState] = useState<
-    "idle" | "scanning" | "done" | "error"
-  >("idle");
-  const [message, setMessage] = useState("");
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setSongs(mergeSongs(bundledSongs, loadCachedSongs()));
-      setLastScan(lastScannedAt());
+    let active = true;
+    loadSongLibrary().then((library) => {
+      if (active) setSongs(library);
     });
-    return () => window.clearTimeout(timer);
+    return () => {
+      active = false;
+    };
   }, []);
 
-  async function scan() {
-    setScanState("scanning");
-    setMessage("");
-    try {
-      const remoteSongs = await scanGithubSongs();
-      setSongs(mergeSongs(bundledSongs, remoteSongs));
-      setLastScan(lastScannedAt());
-      setScanState("done");
-      setMessage(
-        remoteSongs.length
-          ? `已同步 ${remoteSongs.length} 首歌曲，目錄與索引已更新。`
-          : "掃描完成，暫時未有新歌曲。",
-      );
-    } catch (error) {
-      setScanState("error");
-      setMessage(
-        error instanceof Error ? error.message : "掃描失敗，請稍後再試。",
-      );
-    }
-  }
-
-  return { songs, lastScan, scanState, message, scan };
+  return songs;
 }
 
-function SiteHeader() {
+export function SiteHeader() {
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.reload();
+  }
+
   return (
     <header className="site-header">
       <a className="brand" href="/" aria-label="聽歌學日文首頁">
@@ -99,53 +71,24 @@ function SiteHeader() {
         <a href="/#songs">歌曲目錄</a>
         <a href="/grammar">文法索引</a>
         <a href="/vocabulary">生字索引</a>
+        <a href="/import">匯入課文</a>
+        <button type="button" onClick={logout}>
+          登出
+        </button>
       </nav>
     </header>
   );
 }
 
-function SiteFooter() {
+export function SiteFooter() {
   return (
     <footer className="site-footer">
       <p>
         <strong>聽歌學日文</strong>
         <span>為初中級學習者整理的個人歌曲筆記。</span>
       </p>
-      <a href={`${GITHUB_URL}/tree/main/content/songs`} target="_blank">
-        在 GitHub 管理歌曲 ↗
-      </a>
+      <a href="/import">匯入新課文 →</a>
     </footer>
-  );
-}
-
-function Scanner({
-  compact = false,
-}: {
-  compact?: boolean;
-}) {
-  const { songs, lastScan, scanState, message, scan } = useLibrary();
-  return (
-    <div
-      className={`scanner ${compact ? "scanner-compact" : ""}`}
-      aria-live="polite"
-    >
-      <div>
-        {!compact && <span className="eyebrow">自動整理</span>}
-        <strong>{songs.length} 首歌已收錄</strong>
-        <small>
-          {lastScan
-            ? `上次掃描：${dateFormatter.format(new Date(lastScan))}`
-            : "按一下即掃描 GitHub 新歌曲"}
-        </small>
-      </div>
-      <button type="button" onClick={scan} disabled={scanState === "scanning"}>
-        <span aria-hidden="true">{scanState === "scanning" ? "···" : "↻"}</span>
-        {scanState === "scanning" ? "掃描中" : "掃描新歌曲"}
-      </button>
-      {message && (
-        <p className={scanState === "error" ? "error" : "success"}>{message}</p>
-      )}
-    </div>
   );
 }
 
@@ -156,7 +99,11 @@ function SongCard({ song, number }: { song: Song; number: number }) {
       <div>
         <span className="eyebrow">{song.level}</span>
         <h3>
-          <RubyText>{`${song.title}（${song.titleReading}）`}</RubyText>
+          <RubyText>
+            {song.titleReading
+              ? `${song.title}（${song.titleReading}）`
+              : song.title}
+          </RubyText>
         </h3>
         <p>{song.artist}</p>
       </div>
@@ -173,12 +120,12 @@ function SongCard({ song, number }: { song: Song; number: number }) {
 }
 
 export function HomeView() {
-  const library = useLibrary();
-  const grammarCount = library.songs.reduce(
+  const songs = useLibrary();
+  const grammarCount = songs.reduce(
     (total, song) => total + song.grammar.length,
     0,
   );
-  const vocabularyCount = library.songs.reduce(
+  const vocabularyCount = songs.reduce(
     (total, song) => total + song.vocabulary.length,
     0,
   );
@@ -230,7 +177,7 @@ export function HomeView() {
 
         <section className="stat-strip" aria-label="網站內容統計">
           <div>
-            <strong>{library.songs.length}</strong>
+            <strong>{songs.length}</strong>
             <span>歌曲課堂</span>
           </div>
           <div>
@@ -255,51 +202,21 @@ export function HomeView() {
 
           <div className="library-grid">
             <div className="song-list">
-              {library.songs.map((song, index) => (
+              {songs.map((song, index) => (
                 <SongCard key={song.slug} song={song} number={index + 1} />
               ))}
             </div>
             <div className="library-aside">
-              <Scanner />
-              <div className="aside-note">
-                <span className="eyebrow">加入新歌</span>
-                <h3>新增一個 JSON，索引自動完成。</h3>
+              <div className="aside-note import-note">
+                <span className="eyebrow">加入新課文</span>
+                <h3>由你手上的內容直接開始。</h3>
                 <p>
-                  複製歌曲範本、填入內容，再按「掃描新歌曲」。網站會即時重建歌曲目錄、文法和生字連結。
+                  上載檔案、貼上網址，或直接貼入完整文字。匯入後即可在目錄開啟。
                 </p>
-                <a href={`${GITHUB_URL}/blob/main/content/songs/_template.json`}>
-                  查看歌曲範本 →
-                </a>
+                <a href="/import">匯入課文 →</a>
               </div>
             </div>
           </div>
-        </section>
-
-        <section className="learning-map">
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">ONE SONG, EIGHT ANGLES</span>
-              <h2>每首歌，八個學習入口</h2>
-            </div>
-          </div>
-          <ol>
-            {[
-              ["01", "逐句翻譯", "原文與香港中文逐句對照"],
-              ["02", "內容情境", "人物、語氣與故事脈絡"],
-              ["03", "文法重點", "由原句帶到實用例句"],
-              ["04", "生字讀音", "ruby 注音與自然用法"],
-              ["05", "口語表達", "縮約、擬聲詞與語感"],
-              ["06", "易錯地方", "拆解不能逐字硬譯的句子"],
-              ["07", "實用句子", "可真正帶到日常會話"],
-              ["08", "YouTube", "一邊播放一邊跟住學"],
-            ].map(([number, title, description]) => (
-              <li key={number}>
-                <span>{number}</span>
-                <strong>{title}</strong>
-                <p>{description}</p>
-              </li>
-            ))}
-          </ol>
         </section>
       </main>
       <SiteFooter />
@@ -350,7 +267,7 @@ export function SongView({ slug }: { slug: string }) {
         <main className="state-page">
           <span className="eyebrow">404 / SONG NOT FOUND</span>
           <h1>暫時搵唔到呢首歌。</h1>
-          <p>可以先回到歌曲目錄，再按「掃描新歌曲」同步最新內容。</p>
+          <p>可以先回到歌曲目錄，或匯入一篇新課文。</p>
           <a className="primary-button" href="/#songs">
             返回歌曲目錄
           </a>
@@ -370,7 +287,11 @@ export function SongView({ slug }: { slug: string }) {
               {song.level} · {song.tags.join(" / ")}
             </span>
             <h1>
-              <RubyText>{`${song.title}（${song.titleReading}）`}</RubyText>
+              <RubyText>
+                {song.titleReading
+                  ? `${song.title}（${song.titleReading}）`
+                  : song.title}
+              </RubyText>
             </h1>
             <p className="song-artist">{song.artist}</p>
             <p className="song-summary">{song.summary}</p>
@@ -386,8 +307,8 @@ export function SongView({ slug }: { slug: string }) {
             ) : (
               <div className="player-empty">
                 <span aria-hidden="true">▶</span>
-                <strong>YouTube 播放器位置</strong>
-                <p>在歌曲資料加入 youtubeId 後，影片會自動顯示在這裏。</p>
+                <strong>暫未附上影片</strong>
+                <p>你仍可先閱讀本課的翻譯和學習重點。</p>
               </div>
             )}
           </div>
@@ -397,6 +318,12 @@ export function SongView({ slug }: { slug: string }) {
           <aside className="lesson-toc">
             <span className="eyebrow">IN THIS LESSON</span>
             <nav aria-label="本課目錄">
+              {song.rawText && (
+                <a href="#source">
+                  <span>00</span>
+                  課文內容
+                </a>
+              )}
               {songSections.map(([id, label], index) => (
                 <a href={`#${id}`} key={id}>
                   <span>{String(index + 1).padStart(2, "0")}</span>
@@ -410,6 +337,11 @@ export function SongView({ slug }: { slug: string }) {
           </aside>
 
           <article className="lesson">
+            {song.rawText && (
+              <LessonSection id="source" number="00" title="課文內容">
+                <div className="raw-lesson">{song.rawText}</div>
+              </LessonSection>
+            )}
             <LessonSection id="lyrics" number="01" title="逐句日中對照翻譯">
               <div className="lyrics-list">
                 {song.lyrics.map((line, index) => (
@@ -572,12 +504,12 @@ function LessonSection({
 }
 
 export function IndexView({ kind }: { kind: "grammar" | "vocabulary" }) {
-  const library = useLibrary();
+  const songs = useLibrary();
   const [query, setQuery] = useState("");
   const isGrammar = kind === "grammar";
   const entries = useMemo(
     () =>
-      library.songs
+      songs
         .flatMap((song) =>
           (isGrammar ? song.grammar : song.vocabulary).map((item) => ({
             song,
@@ -597,7 +529,7 @@ export function IndexView({ kind }: { kind: "grammar" | "vocabulary" }) {
           const right = "pattern" in b.item ? b.item.pattern : b.item.reading;
           return left.localeCompare(right, "ja");
         }),
-    [isGrammar, library.songs, query],
+    [isGrammar, songs, query],
   );
 
   return (
@@ -616,7 +548,9 @@ export function IndexView({ kind }: { kind: "grammar" | "vocabulary" }) {
                 : "按讀音整理所有重點生字，直接回到歌曲中的實際用法。"}
             </p>
           </div>
-          <Scanner compact />
+          <a className="index-import-link" href="/import">
+            匯入新課文 <span aria-hidden="true">→</span>
+          </a>
         </header>
 
         <div className="index-toolbar">

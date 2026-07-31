@@ -1,11 +1,6 @@
-import demoSong from "@/content/songs/ameagari.json";
-
-export const GITHUB_REPOSITORY = "davetwchiu/learn-japanese-with-songs";
-export const GITHUB_URL = `https://github.com/${GITHUB_REPOSITORY}`;
+const GITHUB_REPOSITORY = "davetwchiu/learn-japanese-with-songs";
 const CONTENT_API = `https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/content/songs`;
 const RAW_ROOT = `https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/content/songs`;
-const CACHE_KEY = "uta-nihongo-songs-v1";
-const SCANNED_KEY = "uta-nihongo-scanned-v1";
 
 export type Example = { jp: string; zh: string };
 export type Grammar = {
@@ -50,21 +45,49 @@ export type Song = {
   }[];
   pitfalls: { phrase: string; explanation: string }[];
   phrases: { jp: string; zh: string; when: string }[];
+  rawText?: string;
 };
 
-export const bundledSongs: Song[] = [demoSong as Song];
+export function normalizeSong(value: unknown): Song {
+  const song = (value ?? {}) as Partial<Song>;
+  return {
+    slug: String(song.slug ?? "").trim(),
+    title: String(song.title ?? "").trim(),
+    titleReading: String(song.titleReading ?? "").trim(),
+    artist: String(song.artist ?? "資料未提供").trim(),
+    level: String(song.level ?? "未分類").trim(),
+    publishedAt:
+      String(song.publishedAt ?? "").trim() ||
+      new Date().toISOString().slice(0, 10),
+    youtubeId: song.youtubeId ? String(song.youtubeId).trim() : null,
+    tags: Array.isArray(song.tags) ? song.tags.map(String).filter(Boolean) : [],
+    summary: String(song.summary ?? "").trim(),
+    lyrics: Array.isArray(song.lyrics) ? song.lyrics : [],
+    context: Array.isArray(song.context) ? song.context.map(String) : [],
+    grammar: Array.isArray(song.grammar) ? song.grammar : [],
+    vocabulary: Array.isArray(song.vocabulary) ? song.vocabulary : [],
+    spoken: Array.isArray(song.spoken) ? song.spoken : [],
+    pitfalls: Array.isArray(song.pitfalls) ? song.pitfalls : [],
+    phrases: Array.isArray(song.phrases) ? song.phrases : [],
+    rawText: song.rawText ? String(song.rawText).trim() : undefined,
+  };
+}
 
-function isSong(value: unknown): value is Song {
+export function isSong(value: unknown): value is Song {
   if (!value || typeof value !== "object") return false;
   const song = value as Partial<Song>;
   return Boolean(
-    song.slug &&
-      song.title &&
-      Array.isArray(song.lyrics) &&
-      Array.isArray(song.grammar) &&
-      Array.isArray(song.vocabulary),
+    typeof song.slug === "string" &&
+      /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(song.slug) &&
+      typeof song.title === "string" &&
+      song.title.trim() &&
+      (Array.isArray(song.lyrics) ||
+        Array.isArray(song.context) ||
+        typeof song.rawText === "string"),
   );
 }
+
+export const bundledSongs: Song[] = [];
 
 export function mergeSongs(...groups: Song[][]): Song[] {
   const songs = new Map<string, Song>();
@@ -74,75 +97,75 @@ export function mergeSongs(...groups: Song[][]): Song[] {
   );
 }
 
-export function loadCachedSongs(): Song[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const value: unknown = JSON.parse(localStorage.getItem(CACHE_KEY) ?? "[]");
-    return Array.isArray(value) ? value.filter(isSong) : [];
-  } catch {
-    return [];
-  }
-}
-
-export function lastScannedAt(): string | null {
-  return typeof window === "undefined"
-    ? null
-    : localStorage.getItem(SCANNED_KEY);
-}
-
-export async function scanGithubSongs(): Promise<Song[]> {
+async function githubSongs(): Promise<Song[]> {
   const listing = await fetch(CONTENT_API, {
     headers: { Accept: "application/vnd.github+json" },
     cache: "no-store",
   });
-  if (!listing.ok) {
-    throw new Error(
-      listing.status === 404
-        ? "GitHub 歌曲資料庫尚未公開，請稍後再試。"
-        : "暫時未能連接 GitHub，請稍後再試。",
-    );
-  }
-
+  if (!listing.ok) return [];
   const files = (await listing.json()) as {
     name: string;
     type: string;
     download_url: string | null;
   }[];
-  const songs = (
-    await Promise.all(
-      files
-        .filter(
-          (file) =>
-            file.type === "file" &&
-            file.name.endsWith(".json") &&
-            !file.name.startsWith("_") &&
-            file.download_url,
-        )
-        .map(async (file) => {
+  const values = await Promise.all(
+    files
+      .filter(
+        (file) =>
+          file.type === "file" &&
+          file.name.endsWith(".json") &&
+          !file.name.startsWith("_") &&
+          file.download_url,
+      )
+      .map(async (file) => {
+        try {
           const response = await fetch(file.download_url!, { cache: "no-store" });
-          return response.ok ? ((await response.json()) as unknown) : null;
-        }),
-    )
-  ).filter(isSong);
+          const value: unknown = response.ok ? await response.json() : null;
+          return isSong(value) ? normalizeSong(value) : null;
+        } catch {
+          return null;
+        }
+      }),
+  );
+  return values.filter((song): song is Song => Boolean(song));
+}
 
-  localStorage.setItem(CACHE_KEY, JSON.stringify(songs));
-  localStorage.setItem(SCANNED_KEY, new Date().toISOString());
-  return songs;
+async function storedSongs(): Promise<Song[]> {
+  try {
+    const response = await fetch("/api/songs", { cache: "no-store" });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { songs?: unknown[] };
+    return (payload.songs ?? [])
+      .filter(isSong)
+      .map((song) => normalizeSong(song));
+  } catch {
+    return [];
+  }
+}
+
+export async function loadSongLibrary(): Promise<Song[]> {
+  const [github, stored] = await Promise.all([githubSongs(), storedSongs()]);
+  return mergeSongs(bundledSongs, github, stored);
 }
 
 export async function fetchSong(slug: string): Promise<Song | null> {
-  const cached = mergeSongs(bundledSongs, loadCachedSongs()).find(
-    (song) => song.slug === slug,
-  );
-  if (cached) return cached;
+  const bundled = bundledSongs.find((song) => song.slug === slug);
+  if (bundled) return bundled;
   try {
+    const stored = await fetch(`/api/songs/${encodeURIComponent(slug)}`, {
+      cache: "no-store",
+    });
+    if (stored.ok) {
+      const payload = (await stored.json()) as { song?: unknown };
+      if (isSong(payload.song)) return normalizeSong(payload.song);
+    }
     const response = await fetch(
       `${RAW_ROOT}/${encodeURIComponent(slug)}.json`,
       { cache: "no-store" },
     );
     if (!response.ok) return null;
-    const song: unknown = await response.json();
-    return isSong(song) ? song : null;
+    const value: unknown = await response.json();
+    return isSong(value) ? normalizeSong(value) : null;
   } catch {
     return null;
   }
