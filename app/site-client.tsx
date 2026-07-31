@@ -62,7 +62,7 @@ function isAppleMobileDevice(): boolean {
 
 function messageServiceWorker(
   registration: ServiceWorkerRegistration,
-  message: { type: string; urls?: string[] },
+  message: { type: string; urls?: string[]; optionalUrls?: string[] },
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     if (!registration.active) {
@@ -72,7 +72,7 @@ function messageServiceWorker(
     const channel = new MessageChannel();
     const timeout = window.setTimeout(
       () => reject(new Error("更新時間過長，請再試一次。")),
-      45_000,
+      60_000,
     );
     channel.port1.onmessage = (event) => {
       window.clearTimeout(timeout);
@@ -139,6 +139,10 @@ export function SiteHeader() {
         .map((entry) => new URL(entry.name))
         .filter((url) => url.origin === window.location.origin)
         .map((url) => `${url.pathname}${url.search}`);
+      const songUrls = slugs.flatMap((slug) => [
+        `/songs/${encodeURIComponent(slug)}`,
+        `/api/songs/${encodeURIComponent(slug)}`,
+      ]);
       await messageServiceWorker(registration, {
         type: "CACHE_URLS",
         urls: [
@@ -148,12 +152,9 @@ export function SiteHeader() {
           "/api/songs",
           "/apple-touch-icon.png",
           "/icon-512.png",
-          ...loadedAssets,
-          ...slugs.flatMap((slug) => [
-            `/songs/${encodeURIComponent(slug)}`,
-            `/api/songs/${encodeURIComponent(slug)}`,
-          ]),
+          ...songUrls,
         ],
+        optionalUrls: loadedAssets,
       });
       setOfflineStatus("done");
       window.setTimeout(() => window.location.reload(), 600);

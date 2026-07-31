@@ -10,37 +10,46 @@ const CORE_URLS = [
 
 async function storeUrls(urls) {
   const cache = await caches.open(CACHE_NAME);
-  let stored = 0;
-  let failed = 0;
-  for (const url of [...new Set(urls)]) {
-    try {
-      const request = new Request(url, {
-        cache: "reload",
-        credentials: "include",
-      });
-      const response = await fetch(request);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      await cache.put(request, response.clone());
-      stored += 1;
-    } catch {
-      failed += 1;
-    }
-  }
+  const results = await Promise.all(
+    [...new Set(urls)].map(async (url) => {
+      try {
+        const request = new Request(url, {
+          cache: "reload",
+          credentials: "include",
+        });
+        const response = await fetch(request);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        await cache.put(request, response.clone());
+        return true;
+      } catch {
+        return false;
+      }
+    }),
+  );
+  const stored = results.filter(Boolean).length;
+  const failed = results.length - stored;
   return { stored, failed };
 }
 
 async function cacheFirst(request) {
   const cache = await caches.open(CACHE_NAME);
-  const cached = await cache.match(request, { ignoreSearch: true });
+  const cached = await cache.match(request, {
+    ignoreSearch: true,
+    ignoreVary: true,
+  });
   if (cached) return cached;
   try {
     const response = await fetch(request);
     if (response.ok) await cache.put(request, response.clone());
     return response;
   } catch {
-    return (
-      (request.mode === "navigate" ? await cache.match("/") : undefined) ||
-      Response.error()
+    if (request.mode !== "navigate") return Response.error();
+    return new Response(
+      `<!doctype html><html lang="zh-HK"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>課文尚未下載</title><body><main><h1>這首課文尚未下載</h1><p>請連接網絡後返回目錄，按「更新」再試。</p><p><a href="/">返回歌曲目錄</a></p></main></body></html>`,
+      {
+        status: 503,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      },
     );
   }
 }
@@ -87,10 +96,13 @@ self.addEventListener("fetch", (event) => {
 
 self.addEventListener("message", (event) => {
   if (event.data?.type === "CACHE_URLS") {
+    const cacheTask = (async () => {
+      const result = await storeUrls(event.data.urls ?? []);
+      event.ports[0]?.postMessage({ ok: result.failed === 0, ...result });
+      await storeUrls(event.data.optionalUrls ?? []);
+    })();
     event.waitUntil(
-      storeUrls(event.data.urls ?? []).then((result) => {
-        event.ports[0]?.postMessage({ ok: result.failed === 0, ...result });
-      }),
+      cacheTask,
     );
   }
   if (event.data?.type === "CLEAR_CACHE") {
