@@ -29,32 +29,20 @@ async function storeUrls(urls) {
   return { stored, failed };
 }
 
-async function networkFirst(request) {
-  const cache = await caches.open(CACHE_NAME);
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      await cache.put(request, response.clone());
-    } else if (response.status >= 500) {
-      return (await cache.match(request, { ignoreSearch: true })) || response;
-    }
-    return response;
-  } catch {
-    return (
-      (await cache.match(request, { ignoreSearch: true })) ||
-      (request.mode === "navigate" ? await cache.match("/") : undefined) ||
-      Response.error()
-    );
-  }
-}
-
 async function cacheFirst(request) {
   const cache = await caches.open(CACHE_NAME);
   const cached = await cache.match(request, { ignoreSearch: true });
   if (cached) return cached;
-  const response = await fetch(request);
-  if (response.ok) await cache.put(request, response.clone());
-  return response;
+  try {
+    const response = await fetch(request);
+    if (response.ok) await cache.put(request, response.clone());
+    return response;
+  } catch {
+    return (
+      (request.mode === "navigate" ? await cache.match("/") : undefined) ||
+      Response.error()
+    );
+  }
 }
 
 self.addEventListener("install", (event) => {
@@ -89,15 +77,12 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  const isDocument =
-    request.mode === "navigate" ||
-    url.pathname === "/" ||
-    url.pathname.startsWith("/songs/");
-  const isSongData =
-    url.pathname === "/api/songs" || url.pathname.startsWith("/api/songs/");
-  event.respondWith(
-    isDocument || isSongData ? networkFirst(request) : cacheFirst(request),
-  );
+  if (request.headers.get("X-Uta-Refresh") === "1") {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  event.respondWith(cacheFirst(request));
 });
 
 self.addEventListener("message", (event) => {

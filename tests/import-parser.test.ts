@@ -286,9 +286,13 @@ test("includes offline learning support and a manual update control", async () =
     readFile(new URL("../public/site.webmanifest", import.meta.url), "utf8"),
   ]);
   assert.match(worker, /CACHE_URLS/);
-  assert.match(worker, /\/api\/songs/);
-  assert.match(worker, /response\.status >= 500/);
+  assert.doesNotMatch(worker, /networkFirst/);
+  assert.match(worker, /event\.respondWith\(cacheFirst\(request\)\)/);
   assert.match(client, /serviceWorker[\s\S]+?\.register\("\/sw\.js"/);
+  assert.match(client, /\/api\/songs/);
+  assert.match(client, /X-Uta-Refresh/);
+  assert.match(client, /isAppleMobileDevice/);
+  assert.match(client, /registration\.unregister/);
   assert.match(client, /更新離線學習內容/);
   assert.match(
     await readFile(new URL("../app/globals.css", import.meta.url), "utf8"),

@@ -53,6 +53,13 @@ function useLibrary() {
 
 type OfflineStatus = "idle" | "working" | "done" | "error" | "unsupported";
 
+function isAppleMobileDevice(): boolean {
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
 function messageServiceWorker(
   registration: ServiceWorkerRegistration,
   message: { type: string; urls?: string[] },
@@ -85,6 +92,23 @@ export function SiteHeader() {
 
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
+    if (!isAppleMobileDevice()) {
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((registrations) =>
+          Promise.all(registrations.map((registration) => registration.unregister())),
+        );
+      if ("caches" in window) {
+        caches.keys().then((names) =>
+          Promise.all(
+            names
+              .filter((name) => name.startsWith("uta-nihongo-offline-"))
+              .map((name) => caches.delete(name)),
+          ),
+        );
+      }
+      return;
+    }
     navigator.serviceWorker
       .register("/sw.js", { scope: "/", updateViaCache: "none" })
       .catch(() => setOfflineStatus("error"));
@@ -99,7 +123,10 @@ export function SiteHeader() {
     try {
       const registration = await navigator.serviceWorker.ready;
       await registration.update();
-      const response = await fetch("/api/songs", { cache: "no-store" });
+      const response = await fetch("/api/songs", {
+        cache: "no-store",
+        headers: { "X-Uta-Refresh": "1" },
+      });
       if (!response.ok) throw new Error("未能讀取歌曲目錄。");
       const payload = (await response.json()) as {
         songs?: { slug?: unknown }[];
@@ -129,7 +156,7 @@ export function SiteHeader() {
         ],
       });
       setOfflineStatus("done");
-      window.setTimeout(() => setOfflineStatus("idle"), 3_000);
+      window.setTimeout(() => window.location.reload(), 600);
     } catch {
       setOfflineStatus("error");
     }
