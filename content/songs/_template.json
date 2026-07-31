@@ -1,0 +1,68 @@
+{
+  "slug": "lowercase-song-slug",
+  "title": "歌曲名稱",
+  "titleReading": "きょくめい",
+  "artist": "歌手",
+  "level": "初中級",
+  "publishedAt": "2026-08-01",
+  "youtubeId": null,
+  "tags": ["主題"],
+  "summary": "歌曲內容簡介。",
+  "lyrics": [
+    {
+      "jp": "漢字（かんじ）を括號標示，網站會自動轉成 ruby。",
+      "zh": "逐句香港中文翻譯。"
+    }
+  ],
+  "context": ["歌曲內容、人物關係、情緒或文化背景。"],
+  "grammar": [
+    {
+      "id": "unique-grammar-id",
+      "pattern": "〜文法",
+      "meaning": "中文意思",
+      "source": "歌詞原句",
+      "structure": "接續方法",
+      "explanation": "在原句中的作用。",
+      "examples": [
+        {
+          "jp": "日文例句。",
+          "zh": "中文翻譯。"
+        }
+      ]
+    }
+  ],
+  "vocabulary": [
+    {
+      "id": "unique-word-id",
+      "term": "漢字",
+      "reading": "かんじ",
+      "partOfSpeech": "名詞",
+      "meaning": "中文意思",
+      "note": "用法或注意事項。",
+      "exampleJp": "日文例句。",
+      "exampleZh": "中文翻譯。"
+    }
+  ],
+  "spoken": [
+    {
+      "term": "口語",
+      "kind": "口語縮約",
+      "meaning": "基本意思。",
+      "tone": "在歌詞中的語氣。",
+      "usage": "是否適合日常或正式場合。"
+    }
+  ],
+  "pitfalls": [
+    {
+      "phrase": "容易誤解的句子",
+      "explanation": "為何不能逐字直譯。"
+    }
+  ],
+  "phrases": [
+    {
+      "jp": "值得背下來的句子。",
+      "zh": "中文意思。",
+      "when": "適用情境。"
+    }
+  ]
+}
