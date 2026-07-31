@@ -33,7 +33,11 @@ async function networkFirst(request) {
   const cache = await caches.open(CACHE_NAME);
   try {
     const response = await fetch(request);
-    if (response.ok) await cache.put(request, response.clone());
+    if (response.ok) {
+      await cache.put(request, response.clone());
+    } else if (response.status >= 500) {
+      return (await cache.match(request, { ignoreSearch: true })) || response;
+    }
     return response;
   } catch {
     return (

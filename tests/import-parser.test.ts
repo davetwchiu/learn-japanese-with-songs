@@ -5,7 +5,11 @@ import {
   parseImportedLesson,
   parseYoutubeId,
 } from "../app/import-parser";
-import { vocabularySortKey } from "../app/song-data";
+import {
+  loadSongLibrary,
+  type Song,
+  vocabularySortKey,
+} from "../app/song-data";
 
 const pasted = `# 《春の道》日文歌詞學習材料
 
@@ -223,6 +227,47 @@ test("sorts kana-only and kanji vocabulary together by reading", () => {
   );
 });
 
+test("keeps stored lessons when GitHub is temporarily unavailable", async () => {
+  const storedSong: Song = {
+    slug: "saved-lesson",
+    title: "已儲存課文",
+    titleReading: "",
+    artist: "テスト歌手",
+    level: "未分類",
+    publishedAt: "2026-07-31",
+    youtubeId: null,
+    tags: [],
+    summary: "",
+    lyrics: [{ jp: "歌です。", zh: "這是一首歌。" }],
+    context: [],
+    grammar: [],
+    vocabulary: [],
+    spoken: [],
+    pitfalls: [],
+    phrases: [],
+  };
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.startsWith("https://api.github.com/")) {
+      throw new Error("GitHub temporarily unavailable");
+    }
+    if (url === "/api/songs") {
+      return Response.json({ songs: [storedSong] });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  try {
+    const songs = await loadSongLibrary();
+    assert.deepEqual(
+      songs.map((song) => song.slug),
+      ["saved-lesson"],
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("removes the unneeded eight-angles block from the site", async () => {
   const source = await readFile(
     new URL("../app/site-client.tsx", import.meta.url),
@@ -240,8 +285,13 @@ test("includes offline learning support and a manual update control", async () =
   ]);
   assert.match(worker, /CACHE_URLS/);
   assert.match(worker, /\/api\/songs/);
+  assert.match(worker, /response\.status >= 500/);
   assert.match(client, /serviceWorker[\s\S]+?\.register\("\/sw\.js"/);
   assert.match(client, /更新離線學習內容/);
+  assert.match(
+    await readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    /@supports \(-webkit-touch-callout: none\)/,
+  );
   assert.match(layout, /site\.webmanifest/);
   assert.equal(JSON.parse(manifest).display, "standalone");
 });

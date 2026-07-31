@@ -154,7 +154,10 @@ async function storedSongs(): Promise<Song[]> {
 }
 
 export async function loadSongLibrary(): Promise<Song[]> {
-  const [github, stored] = await Promise.all([githubSongs(), storedSongs()]);
+  const sources = await Promise.allSettled([githubSongs(), storedSongs()]);
+  const [github, stored] = sources.map((source) =>
+    source.status === "fulfilled" ? source.value : [],
+  );
   return mergeSongs(bundledSongs, github, stored);
 }
 

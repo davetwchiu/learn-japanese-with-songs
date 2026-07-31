@@ -161,6 +161,7 @@ rt {
 .site-header nav .offline-update {
   border: 1px solid var(--line);
   border-radius: 999px;
+  display: none;
   min-width: 60px;
   padding: 5px 10px;
 }
@@ -177,6 +178,14 @@ rt {
 .site-header nav .offline-update:disabled {
   cursor: wait;
   opacity: 0.65;
+}
+
+@supports (-webkit-touch-callout: none) {
+  @media (hover: none) and (pointer: coarse) {
+    .site-header nav .offline-update {
+      display: inline-flex;
+    }
+  }
 }
 
 .hero {
