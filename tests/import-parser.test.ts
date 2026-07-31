@@ -326,11 +326,13 @@ test("resumes YouTube playback after returning from another app", async () => {
   assert.match(player, /enablejsapi/);
   assert.match(player, /visibilitychange/);
   assert.match(player, /addEventListener\("focus", onPageShow\)/);
+  assert.match(player, /addEventListener\("blur", rememberPlayback\)/);
   assert.match(player, /pagehide/);
   assert.match(player, /sessionStorage/);
   assert.match(player, /playVideo\(\)/);
   assert.match(player, /onAutoplayBlocked/);
-  assert.match(player, /getPlayerState\(\) !== PLAYER_PLAYING/);
+  assert.match(player, /currentPlayerState\(\) !== PLAYER_PLAYING/);
+  assert.match(player, /typeof player\.getPlayerState !== "function"/);
   assert.doesNotMatch(
     player,
     /state !== PLAYER_PLAYING && state !== PLAYER_BUFFERING/,
@@ -345,11 +347,19 @@ test("resumes YouTube playback after returning from another app", async () => {
   );
   assert.match(
     player,
-    /function verifyResumeSoon\(\)[\s\S]*?getPlayerState\(\) !== PLAYER_PLAYING[\s\S]*?confirmPlaying\(\)/,
+    /function verifyResumeSoon\(\)[\s\S]*?currentPlayerState\(\) !== PLAYER_PLAYING[\s\S]*?confirmPlaying\(\)/,
   );
   assert.match(
     player,
     /function resumeOnReturn\(\)[\s\S]*?setResumePrompt\(true\)[\s\S]*?tryResume\(\)/,
+  );
+  assert.match(
+    player,
+    /function confirmIntentionalPauseSoon\(\)[\s\S]*?4_000[\s\S]*?lastVisiblePlaying\.current = false/,
+  );
+  assert.match(
+    player,
+    /event\.data === PLAYER_PAUSED[\s\S]*?confirmIntentionalPauseSoon\(\)/,
   );
   assert.match(player, /className="floating-player-resume"/);
   assert.match(player, /data-visible=\{resumePrompt/);

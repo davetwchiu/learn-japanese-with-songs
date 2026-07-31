@@ -149,6 +149,7 @@ export function YouTubePlayer({
 
     let active = true;
     let checkTimer: number | undefined;
+    let pauseConfirmationTimer: number | undefined;
     const storageKey = `uta-youtube-resume:${videoId}`;
     const lastVisiblePlaying = { current: false };
     const resumeIntent = { current: false };
@@ -160,6 +161,20 @@ export function YouTubePlayer({
         window.sessionStorage.removeItem(storageKey);
       } catch {
         // Playback still works when browser storage is unavailable.
+      }
+    }
+
+    function clearPauseConfirmation() {
+      window.clearTimeout(pauseConfirmationTimer);
+    }
+
+    function currentPlayerState(): number | null {
+      const player = playerRef.current;
+      if (!player || typeof player.getPlayerState !== "function") return null;
+      try {
+        return player.getPlayerState();
+      } catch {
+        return null;
       }
     }
 
@@ -180,6 +195,7 @@ export function YouTubePlayer({
     function confirmPlaying() {
       if (!active) return;
       window.clearTimeout(checkTimer);
+      clearPauseConfirmation();
       if (document.visibilityState === "visible") {
         lastVisiblePlaying.current = true;
       }
@@ -189,11 +205,22 @@ export function YouTubePlayer({
       clearStoredResume();
     }
 
+    function confirmIntentionalPauseSoon() {
+      clearPauseConfirmation();
+      pauseConfirmationTimer = window.setTimeout(() => {
+        if (!active || document.visibilityState !== "visible") return;
+        lastVisiblePlaying.current = false;
+        resumeIntent.current = false;
+        resumeAttempt.current = false;
+        clearStoredResume();
+      }, 4_000);
+    }
+
     function verifyResumeSoon() {
       window.clearTimeout(checkTimer);
       checkTimer = window.setTimeout(() => {
         if (!active || !playerRef.current) return;
-        if (playerRef.current.getPlayerState() !== PLAYER_PLAYING) {
+        if (currentPlayerState() !== PLAYER_PLAYING) {
           showManualResume();
         } else {
           confirmPlaying();
@@ -229,7 +256,8 @@ export function YouTubePlayer({
     function rememberPlayback() {
       const player = playerRef.current;
       if (!player) return;
-      const state = player.getPlayerState();
+      clearPauseConfirmation();
+      const state = currentPlayerState();
       if (
         state !== PLAYER_PLAYING &&
         state !== PLAYER_BUFFERING &&
@@ -270,7 +298,12 @@ export function YouTubePlayer({
       ) {
         return;
       }
-      setResumePrompt(true);
+      if (currentPlayerState() === PLAYER_PLAYING) {
+        verifyResumeSoon();
+        return;
+      } else {
+        setResumePrompt(true);
+      }
       tryResume();
     }
 
@@ -297,6 +330,7 @@ export function YouTubePlayer({
 
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("focus", onPageShow);
+    window.addEventListener("blur", rememberPlayback);
     window.addEventListener("pagehide", rememberPlayback);
     window.addEventListener("pageshow", onPageShow);
 
@@ -318,6 +352,7 @@ export function YouTubePlayer({
             onStateChange(event) {
               if (!active) return;
               if (event.data === PLAYER_PLAYING) {
+                clearPauseConfirmation();
                 if (resumeIntent.current || resumeAttempt.current) {
                   verifyResumeSoon();
                 } else {
@@ -325,6 +360,7 @@ export function YouTubePlayer({
                 }
               } else if (event.data === PLAYER_ENDED) {
                 window.clearTimeout(checkTimer);
+                clearPauseConfirmation();
                 lastVisiblePlaying.current = false;
                 resumeIntent.current = false;
                 resumeAttempt.current = false;
@@ -338,10 +374,8 @@ export function YouTubePlayer({
                   showManualResume();
                 } else {
                   window.clearTimeout(checkTimer);
-                  lastVisiblePlaying.current = false;
-                  resumeIntent.current = false;
                   setResumePrompt(false);
-                  clearStoredResume();
+                  confirmIntentionalPauseSoon();
                 }
               }
             },
@@ -358,8 +392,10 @@ export function YouTubePlayer({
     return () => {
       active = false;
       window.clearTimeout(checkTimer);
+      clearPauseConfirmation();
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("focus", onPageShow);
+      window.removeEventListener("blur", rememberPlayback);
       window.removeEventListener("pagehide", rememberPlayback);
       window.removeEventListener("pageshow", onPageShow);
       manualResumeRef.current = () => undefined;
