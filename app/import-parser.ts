@@ -365,6 +365,38 @@ function grammarItems(value: string): Song["grammar"] {
   });
 }
 
+function vocabularyEntry(value: string): { term: string; reading: string } {
+  const entry = cleanMarkdown(value).trim();
+  const wholeWord = entry.match(/^(.+)[（(]([ぁ-ゖァ-ヺー・]+)[）)]$/u);
+  if (wholeWord && !/[（(]/u.test(wholeWord[1])) {
+    return { term: wholeWord[1].trim(), reading: wholeWord[2].trim() };
+  }
+
+  const annotation = /([\p{Script=Han}々〆ヶ]+)[（(]([ぁ-ゖァ-ヺー・]+)[）)]/gu;
+  const matches = [...entry.matchAll(annotation)];
+  if (!matches.length) return { term: entry, reading: "" };
+
+  let cursor = 0;
+  let term = "";
+  let reading = "";
+  let completeReading = true;
+  for (const match of matches) {
+    const leading = entry.slice(cursor, match.index);
+    term += leading + match[1];
+    if (/[\p{Script=Han}々〆ヶ]/u.test(leading)) completeReading = false;
+    reading += leading.replace(/[^ぁ-ゖァ-ヺー・]/gu, "") + match[2];
+    cursor = match.index! + match[0].length;
+  }
+  const trailing = entry.slice(cursor);
+  term += trailing;
+  if (/[\p{Script=Han}々〆ヶ]/u.test(trailing)) completeReading = false;
+  reading += trailing.replace(/[^ぁ-ゖァ-ヺー・]/gu, "");
+  return {
+    term: term.trim(),
+    reading: completeReading ? reading.trim() : "",
+  };
+}
+
 function vocabularyItems(value: string): Song["vocabulary"] {
   const seen = new Map<string, number>();
   return value
@@ -373,16 +405,14 @@ function vocabularyItems(value: string): Song["vocabulary"] {
     .map((line) => line.split("|").slice(1, -1).map((cell) => cell.trim()))
     .filter(
       (cells) =>
-        cells.length >= 3 &&
+        cells.length >= 2 &&
         !/^(?:生字|詞彙|單字|-+)$/.test(cleanMarkdown(cells[0])) &&
         !/^[-:\s]+$/.test(cells.join("")),
     )
-    .map(([rawEntry, rawDescription, rawExample]) => {
-      const entry = cleanMarkdown(rawEntry);
+    .map(([rawEntry, rawDescription = "", rawExample = ""]) => {
       const description = cleanMarkdown(rawDescription);
       const example = cleanMarkdown(rawExample);
-      const reading = entry.match(/[（(]([^）)]+)[）)]/)?.[1] ?? "";
-      const term = entry.replace(/[（(][^）)]+[）)]/, "").trim();
+      const { term, reading } = vocabularyEntry(rawEntry);
       const [partOfSpeech, meaning] = description
         .split(/[；;]/)
         .map((part) => part.trim());
@@ -477,18 +507,10 @@ function rubyTargets(vocabulary: Song["vocabulary"]): {
   );
 }
 
-function addRubyToJapanese(
+function addRubyToPlainJapanese(
   value: string,
   vocabulary: Song["vocabulary"],
 ): string {
-  if (
-    /\[[^\]]+\]\{[^}]+\}|[\p{Script=Han}々〆ヶ]+[（(][ぁ-ゖァ-ヺー・]+[）)]/u.test(
-      value,
-    )
-  ) {
-    return value;
-  }
-
   const matches: {
     start: number;
     end: number;
@@ -523,6 +545,25 @@ function addRubyToJapanese(
   return result + value.slice(cursor);
 }
 
+function addRubyToJapanese(
+  value: string,
+  vocabulary: Song["vocabulary"],
+): string {
+  const explicitRuby =
+    /\[[^\]]+\]\{[^}]+\}|[\p{Script=Han}々〆ヶ]+[（(][ぁ-ゖァ-ヺー・]+[）)]/gu;
+  let cursor = 0;
+  let result = "";
+  for (const match of value.matchAll(explicitRuby)) {
+    result += addRubyToPlainJapanese(
+      value.slice(cursor, match.index),
+      vocabulary,
+    );
+    result += match[0];
+    cursor = match.index! + match[0].length;
+  }
+  return result + addRubyToPlainJapanese(value.slice(cursor), vocabulary);
+}
+
 function addRubyToLyrics(
   lyrics: Song["lyrics"],
   vocabulary: Song["vocabulary"],
@@ -554,17 +595,35 @@ function pitfallItems(value: string): Song["pitfalls"] {
 }
 
 function phraseItems(value: string): Song["phrases"] {
-  return markdownChunks(value).map(({ title, body }) => ({
-    jp:
-      [...body.matchAll(/^\s*(?:[*+-]\s+)?\*\*(.+)\*\*\s*$/gm)][0]?.[1]?.trim() ??
-      title,
-    zh:
-      body.match(/^(?:中文|翻譯|譯文)[：:]\s*(.+)$/m)?.[1]?.trim() ?? "",
-    when:
-      body.match(
-        /^(?:(?:適用|使用)?情境|適合場合|用途)[：:]\s*(.+)$/m,
-      )?.[1]?.trim() ?? "",
-  }));
+  return markdownChunks(value).map(({ title, body }) => {
+    const emphasized = [
+      ...body.matchAll(/^\s*(?:[*+-]\s+)?\*\*(.+)\*\*\s*$/gm),
+    ][0]?.[1]?.trim();
+    const japanese = body
+      .split("\n")
+      .map(pairLine)
+      .find(
+        (line) =>
+          looksJapanese(line) &&
+          !/^(?:中文|翻譯|譯文|(?:適用|使用)?情境|適合場合|用途)[：:]/u.test(
+            line,
+          ),
+      );
+    const context = /^(?:(?:適用|使用)?情境|適合場合|用途)[：:]\s*(.*)$/m.exec(
+      body,
+    );
+    const continuation = context
+      ? cleanMarkdown(body.slice(context.index + context[0].length))
+      : "";
+    return {
+      jp: emphasized ?? japanese ?? title,
+      zh:
+        body.match(/^(?:中文|翻譯|譯文)[：:]\s*(.+)$/m)?.[1]?.trim() ?? "",
+      when: context
+        ? [context[1].trim(), continuation].filter(Boolean).join("\n\n")
+        : "",
+    };
+  });
 }
 
 export function parseYoutubeId(value: string): string | null {

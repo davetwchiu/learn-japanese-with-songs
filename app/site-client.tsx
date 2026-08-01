@@ -628,7 +628,9 @@ export function SongView({ slug }: { slug: string }) {
                       <RubyText>{phrase.jp}</RubyText>
                     </p>
                     <p>{phrase.zh}</p>
-                    <small>{phrase.when}</small>
+                    <small>
+                      <RubyText>{phrase.when}</RubyText>
+                    </small>
                   </article>
                 ))}
               </div>

@@ -215,6 +215,145 @@ test("adds ruby to common inflected vocabulary in imported lyrics", () => {
   );
 });
 
+test("combines per-kanji readings and accepts two-column vocabulary tables", () => {
+  const song = parseImportedLesson(`# 《貴方解剖純愛歌 ～死ね～》日文歌詞學習材料
+
+## 二、逐句日中對照翻譯
+
+**あなたの両腕を切り落として　私の腰に巻き付ければ**
+把你的雙臂斬下來，纏在我的腰上。
+
+**どうして私から逃げ出すの**
+為什麼你要從我身邊逃走？
+
+**あなたが他の人と手を繋いでるのを見たら**
+如果我看到你和別人牽手。
+
+**足を引き裂き　歩かせやしない**
+撕裂你的雙腿，讓你無法行走。
+
+## 五、生字
+
+| 單字 | 意思 |
+| --- | --- |
+| 両腕（りょううで） | 雙臂 |
+| 切（き）り落（お）とす | 斬下 |
+| 巻（ま）き付（つ）ける | 纏上 |
+| 逃（に）げ出（だ）す | 逃走 |
+| 手（て）を繋（つな）ぐ | 牽手 |
+| 引（ひ）き裂（さ）く | 撕裂 |`);
+
+  assert.deepEqual(
+    song.vocabulary.map(({ term, reading, meaning }) => ({
+      term,
+      reading,
+      meaning,
+    })),
+    [
+      { term: "両腕", reading: "りょううで", meaning: "雙臂" },
+      { term: "切り落とす", reading: "きりおとす", meaning: "斬下" },
+      { term: "巻き付ける", reading: "まきつける", meaning: "纏上" },
+      { term: "逃げ出す", reading: "にげだす", meaning: "逃走" },
+      { term: "手を繋ぐ", reading: "てをつなぐ", meaning: "牽手" },
+      { term: "引き裂く", reading: "ひきさく", meaning: "撕裂" },
+    ],
+  );
+  assert.equal(
+    song.lyrics[0].jp,
+    "あなたの[両腕]{りょううで}を[切]{き}り[落]{お}として　私の腰に[巻]{ま}き[付]{つ}ければ",
+  );
+  assert.equal(song.lyrics[1].jp, "どうして私から[逃]{に}げ[出]{だ}すの");
+  assert.equal(
+    song.lyrics[2].jp,
+    "あなたが他の人と[手]{て}を[繋]{つな}いでるのを見たら",
+  );
+  assert.equal(song.lyrics[3].jp, "足を[引]{ひ}き[裂]{さ}き　歩かせやしない");
+});
+
+test("adds missing ruby without replacing existing explicit ruby", () => {
+  const song = parseImportedLesson(
+    JSON.stringify({
+      slug: "partial-ruby",
+      title: "部分注音",
+      lyrics: [
+        {
+          jp: "あなたの[両腕]{りょううで}を切り落として",
+          zh: "把你的雙臂斬下來。",
+        },
+      ],
+      grammar: [],
+      vocabulary: [
+        {
+          id: "arms",
+          term: "両腕",
+          reading: "りょううで",
+          partOfSpeech: "名詞",
+          meaning: "雙臂",
+          note: "",
+          exampleJp: "",
+          exampleZh: "",
+        },
+        {
+          id: "cut-off",
+          term: "切り落とす",
+          reading: "きりおとす",
+          partOfSpeech: "動詞",
+          meaning: "斬下",
+          note: "",
+          exampleJp: "",
+          exampleZh: "",
+        },
+      ],
+    }),
+  );
+
+  assert.equal(
+    song.lyrics[0].jp,
+    "あなたの[両腕]{りょううで}を[切]{き}り[落]{お}として",
+  );
+});
+
+test("keeps complete everyday alternatives in practical phrases", () => {
+  const song = parseImportedLesson(`# 《君の夢を聞きながら、僕は笑えるアイデアを！》
+
+## 八、值得背下來的實用句子
+
+### 6. 表示數也數不完
+
+数えきれない　もしもの話して
+
+中文：來談談數也數不完的「如果……」吧。
+情境：原句省略助詞，較適合歌詞或親密口語。日常較完整的說法是：
+
+数（かぞ）えきれないほど、いろいろな「もしも」の話（はなし）をしよう。
+來談談多得數不完的各種「如果……」吧。
+
+### 7. 鼓勵別人投入新事物
+
+何でも飛び込め
+
+中文：無論是甚麼，都放膽跳進去吧。
+情境：適合比賽、冒險故事或非常熟悉的伙伴之間。命令形較強，不宜直接對陌生人或上司使用。一般鼓勵可說：
+
+何（なん）でも思（おも）い切（き）って挑戦（ちょうせん）してみて。
+甚麼都放膽試着挑戰吧。`);
+
+  assert.deepEqual(song.phrases, [
+    {
+      jp: "数えきれない　もしもの話して",
+      zh: "來談談數也數不完的「如果……」吧。",
+      when:
+        "原句省略助詞，較適合歌詞或親密口語。日常較完整的說法是：\n\n数（かぞ）えきれないほど、いろいろな「もしも」の話（はなし）をしよう。\n來談談多得數不完的各種「如果……」吧。",
+    },
+    {
+      jp: "何でも飛び込め",
+      zh: "無論是甚麼，都放膽跳進去吧。",
+      when:
+        "適合比賽、冒險故事或非常熟悉的伙伴之間。命令形較強，不宜直接對陌生人或上司使用。一般鼓勵可說：\n\n何（なん）でも思（おも）い切（き）って挑戦（ちょうせん）してみて。\n甚麼都放膽試着挑戰吧。",
+    },
+  ]);
+});
+
 test("sorts kana-only and kanji vocabulary together by reading", () => {
   const words = [
     { term: "猫", reading: "ねこ" },
