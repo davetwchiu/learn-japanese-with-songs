@@ -313,6 +313,58 @@ test("adds missing ruby without replacing existing explicit ruby", () => {
   );
 });
 
+test("aligns readings when okurigana also appears inside a kanji reading", () => {
+  const song = parseImportedLesson(
+    JSON.stringify({
+      slug: "ambiguous-okurigana",
+      title: "送り仮名",
+      lyrics: [
+        { jp: "寒さを言い聞かせる", zh: "" },
+        { jp: "胸が痛い", zh: "" },
+      ],
+      grammar: [],
+      vocabulary: [
+        {
+          id: "cold",
+          term: "寒さ",
+          reading: "さむさ",
+          partOfSpeech: "名詞",
+          meaning: "寒冷",
+          note: "",
+          exampleJp: "",
+          exampleZh: "",
+        },
+        {
+          id: "tell",
+          term: "言い聞かせる",
+          reading: "いいきかせる",
+          partOfSpeech: "動詞",
+          meaning: "說服",
+          note: "",
+          exampleJp: "",
+          exampleZh: "",
+        },
+        {
+          id: "heartache",
+          term: "胸が痛い",
+          reading: "むねがいたい",
+          partOfSpeech: "表達",
+          meaning: "心痛",
+          note: "",
+          exampleJp: "",
+          exampleZh: "",
+        },
+      ],
+    }),
+  );
+
+  assert.equal(
+    song.lyrics[0].jp,
+    "[寒]{さむ}さを[言]{い}い[聞]{き}かせる",
+  );
+  assert.equal(song.lyrics[1].jp, "[胸]{むね}が[痛]{いた}い");
+});
+
 test("keeps complete everyday alternatives in practical phrases", () => {
   const song = parseImportedLesson(`# 《君の夢を聞きながら、僕は笑えるアイデアを！》
 

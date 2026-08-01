@@ -440,26 +440,25 @@ function rubyMarkup(surface: string, reading: string): string | null {
     surface.match(/[\p{Script=Han}々〆ヶ]+|[ぁ-ゖァ-ヺー]+/gu) ?? [];
   if (!tokens.length || tokens.join("") !== surface) return null;
 
-  let cursor = 0;
-  let markup = "";
-  for (let index = 0; index < tokens.length; index += 1) {
+  function align(index: number, cursor: number): string | null {
+    if (index === tokens.length) {
+      return cursor === reading.length ? "" : null;
+    }
     const token = tokens[index];
     if (/^[\p{Script=Han}々〆ヶ]+$/u.test(token)) {
-      const next = tokens[index + 1];
-      const boundary =
-        next && /^[ぁ-ゖァ-ヺー]+$/u.test(next)
-          ? reading.indexOf(next, cursor)
-          : reading.length;
-      if (boundary <= cursor) return null;
-      markup += `[${token}]{${reading.slice(cursor, boundary)}}`;
-      cursor = boundary;
-    } else {
-      if (!reading.startsWith(token, cursor)) return null;
-      markup += token;
-      cursor += token.length;
+      for (let boundary = cursor + 1; boundary <= reading.length; boundary += 1) {
+        const remainder = align(index + 1, boundary);
+        if (remainder !== null) {
+          return `[${token}]{${reading.slice(cursor, boundary)}}${remainder}`;
+        }
+      }
+      return null;
     }
+    if (!reading.startsWith(token, cursor)) return null;
+    const remainder = align(index + 1, cursor + token.length);
+    return remainder === null ? null : token + remainder;
   }
-  return cursor === reading.length ? markup : null;
+  return align(0, 0);
 }
 
 function rubyTargets(vocabulary: Song["vocabulary"]): {
