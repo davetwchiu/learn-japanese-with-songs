@@ -423,12 +423,24 @@ test("sorts kana-only and kanji vocabulary together by reading", () => {
 });
 
 test("sorts songs by Japanese title reading", () => {
-  const songs = ["裸の心", "葵", "会いに行くのに", "愛を知るまでは"]
+  const songs = [
+    "裸の心",
+    "葵",
+    "[双葉]{ふたば}",
+    "会いに行くのに",
+    "愛を知るまでは",
+  ]
     .map((title) => normalizeSong({ slug: "song", title, lyrics: [] }))
     .sort(compareSongsByGojūon);
   assert.deepEqual(
     songs.map((song) => song.title),
-    ["会いに行くのに", "愛を知るまでは", "葵", "裸の心"],
+    [
+      "会いに行くのに",
+      "愛を知るまでは",
+      "葵",
+      "裸の心",
+      "[双葉]{ふたば}",
+    ],
   );
 });
 
