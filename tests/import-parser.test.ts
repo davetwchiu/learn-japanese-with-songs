@@ -426,7 +426,7 @@ test("sorts songs by Japanese title reading", () => {
   const songs = [
     "裸の心",
     "葵",
-    "[双葉]{ふたば}",
+    "双葉（ふたば）",
     "会いに行くのに",
     "愛を知るまでは",
   ]
@@ -439,7 +439,7 @@ test("sorts songs by Japanese title reading", () => {
       "愛を知るまでは",
       "葵",
       "裸の心",
-      "[双葉]{ふたば}",
+      "双葉（ふたば）",
     ],
   );
 });

@@ -130,7 +130,6 @@ const existingTitleReadings: Record<string, string> = {
   "裸の心": "はだかのこころ",
   "ハルノヒ": "はるのひ",
   "ビーナスベルト": "びーなすべると",
-  "[双葉]{ふたば}": "ふたば",
   "真夏の夜の匂いがする": "まなつのよるのにおいがする",
   "マリーゴールド": "まりーごーるど",
 };
@@ -141,11 +140,20 @@ const japaneseCollator = new Intl.Collator("ja", {
 });
 
 export function compareSongsByGojūon(a: Song, b: Song): number {
-  const reading = (song: Song) =>
-    vocabularySortKey({
+  const reading = (song: Song) => {
+    const annotatedReading = Array.from(
+      song.title.matchAll(/\{([^}]+)\}|[（(]([ぁ-ゖァ-ヺー・]+)[）)]/gu),
+      (match) => match[1] || match[2],
+    ).join("");
+    return vocabularySortKey({
       term: song.title,
-      reading: song.titleReading || existingTitleReadings[song.title] || song.title,
+      reading:
+        song.titleReading ||
+        annotatedReading ||
+        existingTitleReadings[song.title] ||
+        song.title,
     });
+  };
   return japaneseCollator.compare(reading(a), reading(b));
 }
 
