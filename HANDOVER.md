@@ -1,20 +1,20 @@
 # 聽歌學日文 — Handover Notes
 
-最後更新：2026-08-01（Asia/Hong_Kong）
+最後更新：2026-08-02（Asia/Hong_Kong）
 
 ## 1. Current snapshot
 
-- GitHub repository: <https://github.com/davetwchiu/learn-japanese-with-songs>
+- GitHub content repository: <https://github.com/davetwchiu/learn-japanese-with-songs>
 - Production site: <https://uta-nihongo-davetchiu.davechiu.chatgpt.site>
 - Git branch: `main`
-- Handover 前的程式 HEAD: `240cc5fb051bad96d4a54e4018c07d6a75414751`
+- Handover 更新時的程式 HEAD: `20824bd5eafbad9adda2a02000f9a5d215ba6e18`
 - OpenAI Sites project ID: `appgprj_6a6c04056b208191bd5167021ce39a3e`
-- Latest deployed Sites version: 17
+- Latest deployed Sites version: 25
 - Hosted environment revision: 3
 - Storage: D1 binding `DB`; no R2 binding
 - Access: public Sites URL，另有 app-owned password gate
 
-Handover 建立前已確認：本地 `main`、`origin/main` 和 Sites source 都包含最新播放器修正；當時 working tree clean，而且沒有其他本地或遠端 branch。
+Handover 更新前已確認：本地 `main` 與 Sites source `origin/main` 同步在 `20824bd`，working tree clean。現時 `origin` 是 Sites source repository；上方 GitHub repository 仍由網站作舊有 JSON 課文內容來源之一，不要把兩者當成同一個 remote。
 
 ## 2. Important security note
 
@@ -67,6 +67,17 @@ Production password 是 Sites runtime secret，不在 repository 內。
 - 保留 lyric notes、支援 lesson management。
 - Grammar lesson heading 已統一，並加入 D1 migration `0001_normalize_grammar_titles.sql`。
 
+### 3.5 Japanese gojūon song ordering and title readings
+
+- 歌曲目錄不再按匯入／更新日期排列，改為按歌名讀音的日文 50 音順序。
+- `Song.titleReading` 是純排序 metadata，不應在歌曲目錄或課文標題顯示。
+- AI 課文格式最後一行現規定為 `歌名讀音：完整平假名讀音`；網站 parser 會自動讀取，不再要求使用者在匯入表單另填假名。
+- Markdown AI 課文範本 `聽歌學日文_AI課文格式範本.md` 是網站 repository 以外的使用者文件；本次已同步更新，但日後修改 parser 時亦要另行確認範本保持一致。
+- 舊課文沒有 `歌名讀音` 仍可匯入。現有課文以已知讀音 fallback、歌名內嵌 ruby 或原歌名作排序 fallback。
+- 排序前會把片假名正規化成平假名，並使用日文 collator。
+- `plainSongTitle()` 會移除 `[漢字]{かな}` 及 `漢字（かな）` 類型的讀音標記。歌曲目錄卡片和課文頁 `<h1>` 都只顯示純歌名；歌詞、文法、生字及例句的 ruby 不受影響。
+- Production 已核對「スーパーガール」和「スケッチ」課文標題：只顯示純歌名，沒有 ruby 或括號假名。
+
 ## 4. iPhone/YouTube debugging history
 
 ### Iteration 1 — automatic return resume
@@ -106,14 +117,15 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 | File | Main responsibility / changes |
 | --- | --- |
 | `app/youtube-player.tsx` | 新增 YouTube IFrame API wrapper、lifecycle state、resume storage、auto-resume、stable verification、4-second pause grace、floating-button state 和 runtime guards。 |
-| `app/site-client.tsx` | 課堂頁改用 `YouTubePlayer`；亦包含 offline registration、lesson asset caching 和 manual refresh flow。 |
+| `app/site-client.tsx` | 課堂頁改用 `YouTubePlayer`；包含 offline registration、lesson asset caching、manual refresh flow；目錄和課文標題只用 `plainSongTitle()` 顯示純歌名。 |
 | `app/globals.css` | Player layout、fixed floating resume button、triangle icon、safe-area/mobile styles，以及 offline UI styles。 |
 | `app/login-client.tsx` | 登入成功後清除 cached login/navigation documents，然後 reload。 |
 | `public/sw.js` | Offline cache、network-first navigation、cache version bump、API exclusions、refresh bypass 和 fallback page。 |
-| `tests/import-parser.test.ts` | Parser、offline、PWA、login-cache 和 YouTube-resume implementation assertions；目前共 11 tests。 |
-| `app/import-parser.ts` | Flexible lesson parsing、自動 ruby、inflection handling。 |
-| `app/import/import-client.tsx` | Import UI 配合 parser/ruby 行為。 |
-| `app/song-data.ts` | Source failure fallback、grammar-title normalization 和 song data helpers。 |
+| `tests/import-parser.test.ts` | Parser、歌名讀音、50 音排序、純歌名、offline、PWA、login-cache 和 YouTube-resume assertions；目前共 18 tests。 |
+| `app/import-parser.ts` | Flexible lesson parsing、自動 ruby、inflection handling；讀取課文最後的 `歌名讀音：`。 |
+| `app/import/import-client.tsx` | Import UI 配合 parser/ruby 行為；不再要求使用者另填歌名假名。 |
+| `app/song-data.ts` | Source failure fallback、grammar-title normalization、50 音排序、片假名正規化、現有讀音 fallback 和 `plainSongTitle()`。 |
+| `聽歌學日文_AI課文格式範本.md`（repo 外） | 規定 AI 在整份課文最後一行輸出 `歌名讀音：完整平假名讀音`；網站不直接部署此檔案。 |
 | `app/layout.tsx` | PWA manifest、icons 和相關 metadata。 |
 | `public/site.webmanifest` | Standalone PWA metadata。 |
 | `public/apple-touch-icon.png` | iPhone home-screen icon。 |
@@ -139,19 +151,28 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 | `793ce21` | Fix iPhone login cache and repeated player resume |
 | `50e48ae` | Require stable YouTube resume playback |
 | `240cc5f` | Preserve repeated iPhone player resume |
+| `5ba455b` | Handle ambiguous ruby reading boundaries |
+| `bce0206` | Fix lesson phrase and ruby imports |
+| `7f20443` | Sort songs by Japanese title reading |
+| `fce8a7e` | Handle annotated Futaba title reading |
+| `a0c650d` | Sort titles with embedded kana annotations |
+| `ab58d9b` | Show plain titles in song directory |
+| `489c1a8` | Read title kana from imported lessons |
+| `20824bd` | Keep title readings hidden from lessons |
 
 ## 7. Validation already performed
 
-For the latest player fix:
+For the latest production source:
 
 - `vinext build`: passed.
 - ESLint: passed.
-- Node test runner: 11/11 passed.
+- Node test runner: 18/18 passed.
 - `public/sw.js` syntax check: passed.
 - `git diff --check`: passed.
 - Temporary player lifecycle test route was deleted before commit/deploy.
-- Production deploy succeeded as Sites version 17 using environment revision 3.
-- GitHub `main` was pushed and matched `origin/main` at `240cc5f` before this handover file was added.
+- Production deploy succeeded as Sites version 25 using environment revision 3.
+- Sites source `main` was pushed and matched `origin/main` at `20824bd` before this handover update。
+- Production browser verification confirmed「スーパーガール」和「スケッチ」課文標題都沒有 ruby／括號假名；歌曲目錄亦只顯示純歌名。
 
 ## 8. Known limitations and trade-offs
 
@@ -162,6 +183,7 @@ For the latest player fix:
 5. **Four-second grace trade-off.** If a user intentionally pauses and switches apps within four seconds, the fallback button may still appear on return. This is preferable to losing resume intent during the iPhone pause-before-hide race.
 6. **YouTube lifecycle events are not fully deterministic.** If physical iPhone reports another failure, add temporary diagnostics around event order rather than immediately lengthening timers.
 7. **`npm test` imports `tsx` although it is currently transitive in `package-lock.json`.** A clean npm install should hoist it, but adding `tsx` explicitly to `devDependencies` would make the test dependency less fragile.
+8. **50 音準確度依賴 `titleReading`。** 新 AI 課文應在最後一行提供完整平假名讀音；舊課文缺少此欄時只可使用內嵌讀音、現有 fallback 或原歌名，漢字歌名的排序未必準確。
 
 ## 9. Recommended next steps if the physical iPhone still fails
 
@@ -210,4 +232,5 @@ Sites source credentials are short-lived. Obtain a fresh credential when require
 - Before touching authentication, inspect Sites environment configuration; never infer or overwrite the existing secret value.
 - Before changing service-worker behavior, test both authenticated online navigation and offline lesson navigation on iPhone-sized viewport.
 - Before changing resume behavior, test at least three consecutive cycles, not only the first return.
+- `titleReading` 只供排序；不要重新加到目錄卡片或課文標題。新增課文格式時保留最後一行 `歌名讀音：……`。
 - Treat the deployed URL as production; do not use it for destructive test data.
