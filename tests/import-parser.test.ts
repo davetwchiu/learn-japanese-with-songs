@@ -6,7 +6,9 @@ import {
   parseYoutubeId,
 } from "../app/import-parser";
 import {
+  compareSongsByGojūon,
   loadSongLibrary,
+  normalizeSong,
   type Song,
   vocabularySortKey,
 } from "../app/song-data";
@@ -417,6 +419,16 @@ test("sorts kana-only and kanji vocabulary together by reading", () => {
   assert.deepEqual(
     words.map((word) => word.term),
     ["愛", "おてて", "猫"],
+  );
+});
+
+test("sorts songs by Japanese title reading", () => {
+  const songs = ["裸の心", "葵", "会いに行くのに", "愛を知るまでは"]
+    .map((title) => normalizeSong({ slug: "song", title, lyrics: [] }))
+    .sort(compareSongsByGojūon);
+  assert.deepEqual(
+    songs.map((song) => song.title),
+    ["会いに行くのに", "愛を知るまでは", "葵", "裸の心"],
   );
 });
 

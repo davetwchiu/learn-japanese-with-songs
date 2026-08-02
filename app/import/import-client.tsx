@@ -11,6 +11,7 @@ export function ImportView() {
   const [url, setUrl] = useState("");
   const [text, setText] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [titleReading, setTitleReading] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [message, setMessage] = useState("");
 
@@ -32,6 +33,7 @@ export function ImportView() {
           fileName: file?.name,
           url,
           youtubeUrl,
+          titleReading,
         }),
       });
       const result = (await response.json()) as {
@@ -117,6 +119,18 @@ export function ImportView() {
                 />
               </label>
             )}
+
+            <label>
+              <span>歌名讀音（平假名）</span>
+              <input
+                type="text"
+                value={titleReading}
+                onChange={(event) => setTitleReading(event.target.value)}
+                placeholder="例如：はだかのこころ"
+                required
+              />
+              <small>歌曲目錄會依照這個讀音按 50 音排列。</small>
+            </label>
 
             <label>
               <span>YouTube 影片（選填）</span>

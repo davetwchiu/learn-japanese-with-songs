@@ -115,12 +115,44 @@ export function isSong(value: unknown): value is Song {
 
 export const bundledSongs: Song[] = [];
 
+const existingTitleReadings: Record<string, string> = {
+  "会いに行くのに": "あいにいくのに",
+  "愛を知るまでは": "あいをしるまでは",
+  "葵": "あおい",
+  "貴方解剖純愛歌 ～死ね～": "あなたかいぼうじゅんあいか しね",
+  "生きていたんだよな": "いきていたんだよな",
+  "駅前喫茶ポプラ": "えきまえきっさぽぷら",
+  "君の夢を聞きながら、僕は笑えるアイデアを！":
+    "きみのゆめをききながらぼくはわらえるあいであを",
+  "君はロックを聴かない": "きみはろっくをきかない",
+  "猫にジェラシー": "ねこにじぇらしー",
+  "ノット・オーケー": "のっと・おーけー",
+  "裸の心": "はだかのこころ",
+  "ハルノヒ": "はるのひ",
+  "ビーナスベルト": "びーなすべると",
+  "双葉": "ふたば",
+  "真夏の夜の匂いがする": "まなつのよるのにおいがする",
+  "マリーゴールド": "まりーごーるど",
+};
+
+const japaneseCollator = new Intl.Collator("ja", {
+  sensitivity: "base",
+  numeric: true,
+});
+
+export function compareSongsByGojūon(a: Song, b: Song): number {
+  const reading = (song: Song) =>
+    vocabularySortKey({
+      term: song.title,
+      reading: song.titleReading || existingTitleReadings[song.title] || song.title,
+    });
+  return japaneseCollator.compare(reading(a), reading(b));
+}
+
 export function mergeSongs(...groups: Song[][]): Song[] {
   const songs = new Map<string, Song>();
   groups.flat().forEach((song) => songs.set(song.slug, song));
-  return [...songs.values()].sort((a, b) =>
-    b.publishedAt.localeCompare(a.publishedAt),
-  );
+  return [...songs.values()].sort(compareSongsByGojūon);
 }
 
 async function githubSongs(): Promise<Song[]> {
