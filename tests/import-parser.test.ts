@@ -9,6 +9,7 @@ import {
   compareSongsByGojūon,
   loadSongLibrary,
   normalizeSong,
+  plainSongTitle,
   type Song,
   vocabularySortKey,
 } from "../app/song-data";
@@ -442,6 +443,14 @@ test("sorts songs by Japanese title reading", () => {
       "双葉（ふたば）",
     ],
   );
+});
+
+test("shows plain song titles without ruby annotations in the directory", () => {
+  assert.equal(
+    plainSongTitle("[桜]{さくら}が[降]{ふ}る[夜]{よる}は"),
+    "桜が降る夜は",
+  );
+  assert.equal(plainSongTitle("双葉（ふたば）"), "双葉");
 });
 
 test("keeps stored lessons when GitHub is temporarily unavailable", async () => {

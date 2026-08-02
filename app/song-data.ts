@@ -58,6 +58,12 @@ export function vocabularySortKey(
     );
 }
 
+export function plainSongTitle(title: string): string {
+  return title
+    .replace(/\[([^\]]+)\]\{[^}]+\}/gu, "$1")
+    .replace(/([\p{Script=Han}々〆ヶ]+)[（(][ぁ-ゖァ-ヺー・]+[）)]/gu, "$1");
+}
+
 export function normalizeGrammarHeading(grammar: Grammar): Grammar {
   const item = (grammar ?? {}) as Grammar;
   const pattern = String(item.pattern ?? "").trim();

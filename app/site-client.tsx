@@ -5,6 +5,7 @@ import {
   bundledSongs,
   fetchSong,
   loadSongLibrary,
+  plainSongTitle,
   type Song,
   vocabularySortKey,
 } from "./song-data";
@@ -243,13 +244,7 @@ function SongCard({ song, number }: { song: Song; number: number }) {
       <span className="song-number">{String(number).padStart(2, "0")}</span>
       <div>
         <span className="eyebrow">{song.level}</span>
-        <h3>
-          <RubyText>
-            {song.titleReading
-              ? `${song.title}（${song.titleReading}）`
-              : song.title}
-          </RubyText>
-        </h3>
+        <h3>{plainSongTitle(song.title)}</h3>
         <p>{song.artist}</p>
       </div>
       <div className="song-tags">
