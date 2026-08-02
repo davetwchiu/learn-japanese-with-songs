@@ -30,7 +30,6 @@ export async function POST(request: Request) {
       fileName?: string;
       url?: string;
       youtubeUrl?: string;
-      titleReading?: string;
     };
     let content = payload.content ?? "";
     let sourceName = payload.fileName ?? "";
@@ -51,17 +50,8 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const titleReading =
-      payload.titleReading?.trim() || importedSong.titleReading.trim();
-    if (!titleReading) {
-      return Response.json(
-        { error: "請提供歌名的平假名讀音，以便按 50 音排序。" },
-        { status: 400 },
-      );
-    }
     const song = {
       ...importedSong,
-      titleReading,
       ...(videoId ? { youtubeId: videoId } : {}),
     };
     await saveStoredSong(song);

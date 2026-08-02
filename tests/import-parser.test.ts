@@ -90,6 +90,18 @@ test("extracts every learning section from a normal pasted lesson", () => {
   assert.equal(song.rawText, undefined);
 });
 
+test("reads the song title reading from the final lesson line", () => {
+  const song = parseImportedLesson(`# 《桜が降る夜は》日文歌詞學習材料
+
+## 二、逐句日中對照翻譯
+
+**桜が降る夜は**
+在櫻花飄落的夜晚。
+
+歌名讀音：さくらがふるよるは`);
+  assert.equal(song.titleReading, "さくらがふるよるは");
+});
+
 test("accepts different heading levels, bold metadata, and list examples", () => {
   const flexible = `前言可以放在歌曲資料之前。
 

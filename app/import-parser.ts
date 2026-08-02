@@ -735,7 +735,7 @@ export function parseImportedLesson(
   return normalizeSong({
     slug: suppliedSlug || stableSlug(title),
     title,
-    titleReading: field(text, ["讀音", "假名", "reading"]),
+    titleReading: field(text, ["歌名讀音", "讀音", "假名", "reading"]),
     artist:
       field(text, ["歌", "歌手", "作者", "artist"]) || "匯入課文",
     level: field(text, ["程度", "級別", "level"]) || "未分類",
