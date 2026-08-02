@@ -457,7 +457,7 @@ test("sorts songs by Japanese title reading", () => {
   );
 });
 
-test("shows plain song titles without ruby annotations in the directory", () => {
+test("shows plain song titles without ruby annotations", () => {
   assert.equal(
     plainSongTitle("[桜]{さくら}が[降]{ふ}る[夜]{よる}は"),
     "桜が降る夜は",

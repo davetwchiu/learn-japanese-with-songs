@@ -429,13 +429,7 @@ export function SongView({ slug }: { slug: string }) {
               {song.level}
               {tags.length > 0 ? ` · ${tags.join(" / ")}` : ""}
             </span>
-            <h1>
-              <RubyText>
-                {song.titleReading
-                  ? `${song.title}（${song.titleReading}）`
-                  : song.title}
-              </RubyText>
-            </h1>
+            <h1>{plainSongTitle(song.title)}</h1>
             <p className="song-artist">{song.artist}</p>
             <p className="song-summary">{song.summary}</p>
             <a className="manage-link" href={`/songs/${song.slug}/manage`}>
