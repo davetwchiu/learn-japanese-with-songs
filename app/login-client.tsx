@@ -3,28 +3,47 @@
 import { useState, type FormEvent } from "react";
 
 const OFFLINE_CACHE_PREFIX = "uta-nihongo-offline-";
+const LOGIN_TIMEOUT_MS = 15_000;
+const OFFLINE_RESET_WAIT_MS = 1_200;
 
-async function clearCachedLoginDocuments() {
-  if (!("caches" in window)) return;
-  try {
-    const names = (await caches.keys()).filter((name) =>
-      name.startsWith(OFFLINE_CACHE_PREFIX),
+async function resetOfflineShell() {
+  const tasks: Promise<unknown>[] = [];
+  if ("caches" in window) {
+    tasks.push(
+      caches
+        .keys()
+        .then((names) =>
+          Promise.all(
+            names
+              .filter((name) => name.startsWith(OFFLINE_CACHE_PREFIX))
+              .map((name) => caches.delete(name)),
+          ),
+        ),
     );
-    const urls = [
-      window.location.href,
-      new URL("/", window.location.origin).href,
-    ];
-    await Promise.all(
-      names.map(async (name) => {
-        const cache = await caches.open(name);
-        await Promise.all(
-          urls.map((url) => cache.delete(url, { ignoreSearch: true })),
-        );
-      }),
-    );
-  } catch {
-    // Continue after login even when old offline HTML cannot be removed.
   }
+  if ("serviceWorker" in navigator) {
+    tasks.push(
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((registrations) =>
+          Promise.all(
+            registrations.map((registration) => registration.unregister()),
+          ),
+        ),
+    );
+  }
+  await Promise.allSettled(tasks);
+}
+
+async function waitAtMost(promise: Promise<unknown>, milliseconds: number) {
+  let timeout: number | undefined;
+  await Promise.race([
+    promise,
+    new Promise<void>((resolve) => {
+      timeout = window.setTimeout(resolve, milliseconds);
+    }),
+  ]);
+  if (timeout !== undefined) window.clearTimeout(timeout);
 }
 
 export function LoginView() {
@@ -36,19 +55,39 @@ export function LoginView() {
     event.preventDefault();
     setStatus("loading");
     setMessage("");
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), LOGIN_TIMEOUT_MS);
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ password }),
+        signal: controller.signal,
       });
-      const result = (await response.json()) as { error?: string };
+      const result = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
       if (!response.ok) throw new Error(result.error ?? "密碼不正確。");
-      await clearCachedLoginDocuments();
-      window.location.reload();
+      await waitAtMost(resetOfflineShell(), OFFLINE_RESET_WAIT_MS);
+      const destination = new URL("/", window.location.origin);
+      destination.searchParams.set("signed_in", String(Date.now()));
+      window.location.replace(destination.toString());
     } catch (error) {
       setStatus("error");
-      setMessage(error instanceof Error ? error.message : "登入失敗。");
+      setMessage(
+        error instanceof DOMException && error.name === "AbortError"
+          ? "登入連線時間過長，請檢查網絡後再試。"
+          : error instanceof Error
+            ? error.message
+            : "登入失敗。",
+      );
+    } finally {
+      window.clearTimeout(timeout);
     }
   }
 
@@ -61,10 +100,11 @@ export function LoginView() {
         <span className="eyebrow">PRIVATE LIBRARY</span>
         <h1>聽歌學日文</h1>
         <p>輸入網站密碼，繼續你的日文歌曲課堂。</p>
-        <form onSubmit={submit}>
+        <form action="/api/auth/login" method="post" onSubmit={submit}>
           <label htmlFor="site-password">密碼</label>
           <input
             id="site-password"
+            name="password"
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}

@@ -167,20 +167,6 @@ export function SiteHeader() {
     }
   }
 
-  async function logout() {
-    if ("serviceWorker" in navigator) {
-      try {
-        await messageServiceWorker(await navigator.serviceWorker.ready, {
-          type: "CLEAR_CACHE",
-        });
-      } catch {
-        // Continue signing out even when offline storage cannot be cleared.
-      }
-    }
-    await fetch("/api/auth/logout", { method: "POST" });
-    window.location.reload();
-  }
-
   const offlineLabel = {
     idle: "更新",
     working: "更新中…",
@@ -218,9 +204,6 @@ export function SiteHeader() {
           title="下載最新課文，方便離線學習"
         >
           {offlineLabel}
-        </button>
-        <button type="button" onClick={logout}>
-          登出
         </button>
       </nav>
     </header>

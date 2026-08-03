@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "uta-nihongo-offline-";
-const CACHE_NAME = `${CACHE_PREFIX}v2`;
+const CACHE_NAME = `${CACHE_PREFIX}v3`;
 const CORE_URLS = [
   "/",
   "/grammar",
@@ -123,13 +123,6 @@ self.addEventListener("message", (event) => {
     })();
     event.waitUntil(
       cacheTask,
-    );
-  }
-  if (event.data?.type === "CLEAR_CACHE") {
-    event.waitUntil(
-      caches.delete(CACHE_NAME).then(() => {
-        event.ports[0]?.postMessage({ ok: true });
-      }),
     );
   }
 });

@@ -86,7 +86,3 @@ export async function requestIsAuthenticated(request: Request): Promise<boolean>
 export async function sessionCookieHeader(): Promise<string> {
   return `${COOKIE_NAME}=${await sessionToken(password())}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800`;
 }
-
-export function clearSessionCookieHeader(): string {
-  return `${COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
-}

@@ -523,7 +523,7 @@ test("includes offline learning support and a manual update control", async () =
     readFile(new URL("../public/site.webmanifest", import.meta.url), "utf8"),
   ]);
   assert.match(worker, /CACHE_URLS/);
-  assert.match(worker, /\$\{CACHE_PREFIX\}v2/);
+  assert.match(worker, /\$\{CACHE_PREFIX\}v3/);
   assert.match(worker, /networkFirstNavigation/);
   assert.match(worker, /request\.mode === "navigate"/);
   assert.match(
@@ -541,15 +541,44 @@ test("includes offline learning support and a manual update control", async () =
   assert.match(client, /isAppleMobileDevice/);
   assert.match(client, /registration\.unregister/);
   assert.match(client, /更新離線學習內容/);
-  assert.match(login, /clearCachedLoginDocuments/);
-  assert.match(login, /cache\.delete/);
-  assert.match(login, /window\.location\.reload/);
+  assert.match(login, /resetOfflineShell/);
+  assert.match(login, /Promise\.race/);
+  assert.match(login, /OFFLINE_RESET_WAIT_MS/);
+  assert.match(login, /action="\/api\/auth\/login"/);
+  assert.match(login, /method="post"/);
+  assert.match(login, /name="password"/);
+  assert.match(login, /window\.location\.replace/);
+  assert.doesNotMatch(client, /logout|登出/);
+  assert.doesNotMatch(worker, /CLEAR_CACHE/);
   assert.match(
     await readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     /@supports \(-webkit-touch-callout: none\)/,
   );
   assert.match(layout, /site\.webmanifest/);
   assert.equal(JSON.parse(manifest).display, "standalone");
+});
+
+test("keeps login usable without hydration and removes logout", async () => {
+  const [client, login, authRoute, passwordAuth] = await Promise.all([
+    readFile(new URL("../app/site-client.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/login-client.tsx", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/api/auth/[action]/route.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../app/password-auth.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(login, /action="\/api\/auth\/login"/);
+  assert.match(login, /method="post"/);
+  assert.match(login, /name="password"/);
+  assert.match(login, /LOGIN_TIMEOUT_MS/);
+  assert.match(login, /OFFLINE_RESET_WAIT_MS/);
+  assert.match(authRoute, /request\.formData\(\)/);
+  assert.match(authRoute, /status:\s*303/);
+  assert.match(authRoute, /"Set-Cookie": cookie/);
+  assert.doesNotMatch(client, /logout|登出/);
+  assert.doesNotMatch(authRoute, /action === "logout"/);
+  assert.doesNotMatch(passwordAuth, /clearSessionCookieHeader/);
 });
 
 test("resumes YouTube playback after returning from another app", async () => {
