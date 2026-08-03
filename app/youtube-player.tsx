@@ -101,7 +101,7 @@ function loadYouTubeApi(): Promise<YouTubeApi> {
       },
       { once: true },
     );
-    document.head.append(script);
+    document.head.appendChild(script);
   }).catch((error) => {
     youtubeApiPromise = null;
     throw error;

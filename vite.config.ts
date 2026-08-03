@@ -52,7 +52,11 @@ export default defineConfig(async () => {
       sites(),
       cloudflare({
         viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
-        config: localBindingConfig,
+        config: (userConfig) => {
+          if (process.env.CLOUDFLARE_DEPLOY !== "1") {
+            Object.assign(userConfig, localBindingConfig);
+          }
+        },
       }),
     ],
   };
