@@ -10,14 +10,15 @@
 - Git branch: `main`
 - Cloudflare deployed source HEAD: `67ec50d`
 - OpenAI Sites project ID: `appgprj_6a6c04056b208191bd5167021ce39a3e`
-- Latest deployed Sites version: 26
+- Latest deployed Sites version: 28
 - Hosted environment revision: 3
 - Storage: D1 binding `DB`; no R2 binding
 - Access: public Sites URL，另有 app-owned password gate
 
 現時 Git `origin` 是上方 GitHub repository。Cloudflare Worker 使用 commit
-`67ec50d` 部署；OpenAI Sites 仍是獨立 primary deployment，其 D1 沒有因
-Cloudflare 部署而修改或複製。兩個 D1 必須視為獨立資料來源。
+`67ec50d` 部署；OpenAI Sites 仍是獨立 primary deployment。原 Sites D1
+沒有被修改，但 21 首課文已作一次性唯讀備份並複製到 Cloudflare D1。
+兩個 D1 之後仍必須視為獨立資料來源。
 
 ## 2. Important security note
 
@@ -177,12 +178,18 @@ For the latest production source:
 - `public/sw.js` syntax check: passed.
 - `git diff --check`: passed.
 - Temporary player lifecycle test route was deleted before commit/deploy.
-- OpenAI Sites version 26 remains active using environment revision 3; its D1
-  was not copied into or modified by the Cloudflare deployment.
+- OpenAI Sites version 28 remains active using environment revision 3. Version
+  27 temporarily exposed an authenticated backup page; version 28 removed it
+  after the one-time copy. The Sites D1 itself was not modified.
 - Production browser verification confirmed「スーパーガール」和「スケッチ」課文標題都沒有 ruby／括號假名；歌曲目錄亦只顯示純歌名。
 - Cloudflare build、Wrangler dry-run、TypeScript、ESLint、18/18 tests、service-worker syntax 和 `git diff --check` 均通過。
 - Cloudflare 未登入頁已在 Browser 確認；`/api/auth/status` 回報 `configured: true`，未登入 `/api/songs` 正確回應 401。
 - Cloudflare `site.webmanifest`、`sw.js`、icons 和 OG image 均回應 200；remote D1 `songs` table 及 migrations 已存在。
+- Cloudflare remote D1 contains 21 songs with 21 unique slugs, matching the
+  authenticated Sites backup taken on 2026-08-03.
+- Authenticated Browser verification confirmed 21 lessons, 217 grammar items,
+  598 vocabulary items, the full lesson view, live YouTube iframe, import page,
+  manage page, grammar index and vocabulary index.
 
 ## 8. Known limitations and trade-offs
 
@@ -245,7 +252,7 @@ Sites source credentials are short-lived. Obtain a fresh credential when require
 - `titleReading` 只供排序；不要重新加到目錄卡片或課文標題。新增課文格式時保留最後一行 `歌名讀音：……`。
 - Treat the deployed URL as production; do not use it for destructive test data.
 
-## 12. Cloudflare dual hosting (deployed; authenticated checks pending)
+## 12. Cloudflare dual hosting (deployed and verified)
 
 The existing OpenAI Sites deployment remains the primary site. A separate
 Cloudflare Workers + D1 copy is now deployed as a secondary instance; do not
@@ -267,7 +274,12 @@ Status as of 2026-08-03:
 - `SITE_PASSWORD` exists as a Cloudflare `secret_text`. Its value was entered by
   the owner in Cloudflare Dashboard and was never read, copied or stored by the
   deployment process.
-- Remote D1 currently contains zero `songs`. No OpenAI Sites D1 rows were copied.
+- Remote D1 contains 21 `songs` with 21 unique slugs. They were copied one way
+  from an authenticated Sites backup on 2026-08-03; the source D1 was not
+  changed.
+- A temporary authenticated `/backup` page was deployed only for the export in
+  Sites version 27 and removed immediately afterward in Sites version 28. The
+  backup page is not present in the final source.
 
 Verified on the Cloudflare deployment:
 
@@ -279,15 +291,13 @@ Verified on the Cloudflare deployment:
   `ASSETS` bindings.
 - Cloudflare build, dry-run, TypeScript, ESLint, 18 tests and service-worker
   syntax checks passed before deployment.
+- Authenticated Browser checks confirmed the 21-song catalogue, 217 grammar
+  entries, 598 vocabulary entries, an existing lesson, YouTube iframe, import,
+  manage, grammar-index and vocabulary-index pages.
 
-Still requiring an owner-authenticated Browser session:
-
-1. Log in to the Cloudflare URL and confirm the GitHub-backed lesson catalogue.
-2. Open an existing lesson and confirm the inline YouTube player loads.
-3. Check import/manage pages against the new D1. Avoid creating destructive test
-   data unless the owner explicitly wants it retained.
-4. Exercise PWA/offline caching on the target iPhone. Browser desktop checks do
-   not prove physical iPhone Safari behavior.
+Physical iPhone PWA/offline behavior still requires owner testing. Desktop
+Browser checks and HTTP asset checks do not prove physical iPhone Safari
+behavior.
 
 Cloudflare deployment commands:
 
@@ -300,7 +310,8 @@ Run `npx wrangler types` after changing `wrangler.jsonc`. Apply future D1
 migrations to the Cloudflare database explicitly and verify the target before
 running them. Normal Sites/local builds must not set `CLOUDFLARE_DEPLOY=1`.
 
-The Cloudflare instance is not yet a full data backup. Export and reconcile any
-D1-only lessons from OpenAI Sites before describing it as one. Automatic
-two-way mirroring remains postponed because it could overwrite newer lesson
-data.
+Cloudflare is a complete 21-song snapshot of the Sites D1 as of 2026-08-03, but
+it is not an automatic mirror. Any later import, edit or deletion affects only
+the instance where it was performed. Reconcile both D1 databases before future
+backup claims. Automatic two-way mirroring remains postponed because it could
+overwrite newer lesson data.
