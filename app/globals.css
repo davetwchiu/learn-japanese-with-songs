@@ -1722,6 +1722,7 @@ rt {
 
   .lesson-toc {
     background: var(--paper);
+    min-width: 0;
     position: sticky;
     top: 82px;
     z-index: 10;
