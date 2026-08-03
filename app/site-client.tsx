@@ -1,5 +1,5 @@
 "use client";
-/* eslint-disable @next/next/no-html-link-for-pages */
+/* eslint-disable @next/next/no-html-link-for-pages, @next/next/no-img-element */
 
 import {
   bundledSongs,
@@ -281,25 +281,14 @@ export function HomeView() {
               </a>
             </div>
           </div>
-          <div className="hero-poster" aria-label="日文歌詞學習示意">
-            <span className="poster-kana">うた</span>
-            <span className="poster-note" aria-hidden="true">
-              ♪
-            </span>
-            <ruby>
-              言葉<rt>ことば</rt>
-            </ruby>
-            <strong>×</strong>
-            <ruby>
-              音楽<rt>おんがく</rt>
-            </ruby>
-            <div className="sound-wave" aria-hidden="true">
-              {Array.from({ length: 15 }, (_, index) => (
-                <i key={index} />
-              ))}
-            </div>
-            <small>聽見語感・讀懂意思・帶走句型</small>
-          </div>
+          <figure className="hero-poster">
+            <img
+              src="/aimyon-hero-poster.webp"
+              alt="言葉與音樂交織的聽歌學日文海報，配上あいみょん的淡色照片"
+              width="1254"
+              height="1254"
+            />
+          </figure>
         </section>
 
         <section className="stat-strip" aria-label="網站內容統計">

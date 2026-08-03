@@ -4,6 +4,7 @@ const CORE_URLS = [
   "/",
   "/grammar",
   "/vocabulary",
+  "/aimyon-hero-poster.webp",
   "/apple-touch-icon.png",
   "/icon-512.png",
 ];
