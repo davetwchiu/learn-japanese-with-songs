@@ -285,6 +285,44 @@ node --check public/sw.js
 git diff --check
 ```
 
+### Production rule for code changes
+
+歌曲內容更新與程式更新是兩條不同流程：
+
+- 在 Cloudflare 主站匯入、修改或刪除歌曲，只會產生 data event；既有 mirror
+  會自動把內容同步到 OpenAI Sites，兩邊都不需要重新 deploy。
+- 任何會改變網站程式、UI、API、database schema、build config 或 Worker 的
+  code change，如獲指示部署到 production，必須以**同一個已驗證 commit**
+  同時部署 Cloudflare 主站和 OpenAI Sites 鏡像。除非是已記錄的 emergency
+  hotfix，否則不可只部署其中一邊後便當作完成。
+- OpenAI Sites 部署後必須繼續使用 `MIRROR_READ_ONLY=1`；code 內的匯入／
+  管理功能仍保留，只由 runtime mode 隱藏和封鎖 mutation。
+- 如只改 documentation、tests 或不會進入 runtime artifact 的檔案，可不重新
+  deploy，但仍要清楚記錄 deployed commit 與 Git HEAD 的差別。
+- 每次修改 `HANDOVER.md`，必須在同一個 task commit 並 push 到 GitHub
+  `origin/main`。只有遠端 branch 已確認包含該 commit 才算完成；如果 GitHub
+  暫時不可用，必須明確回報尚未同步，不可只留下本機修改。
+
+建議 production code release 次序：
+
+1. 完成 normal Sites build、Cloudflare build、TypeScript、ESLint、tests、
+   service-worker syntax、Wrangler dry-runs 和 `git diff --check`。
+2. Commit 後把同一 SHA push 到 GitHub `main` 和 OpenAI Sites source branch。
+3. 如果 receiver、event schema 或共用 API contract 有改，先部署向後兼容的
+   OpenAI Sites receiver；其他 UI-only change 亦可先部署 Sites，減少兩邊版本
+   不一致的時間。
+4. Package、save 及 deploy OpenAI Sites，poll 至 `succeeded`，並確認
+   environment revision 正確及 `MIRROR_READ_ONLY=1` 仍生效。
+5. 套用所有 pending Cloudflare D1 migrations，再以同一 commit build/deploy
+   Cloudflare 主 Worker。
+6. 如 `worker/mirror-retry.ts`、`db/mirror.ts` 或 `wrangler.mirror.jsonc` 有改，
+   同一 release 亦要部署 retry Worker；secret 只可經平台 secret flow 更新。
+7. 在 Browser 驗證 Cloudflare 保留完整管理功能、OpenAI Sites 沒有管理入口；
+   檢查兩邊歌曲數量及一首實際課文。
+8. 執行一次內容不變的 signed sync 或等候下一個真實更新，確認 delivered、
+   failed、invalid 和 `mirror_outbox` 狀態；最後把 version、environment revision、
+   commit 及測試結果寫回本文件。
+
 This project contains `.openai/hosting.json`, so production changes should use the Sites build and hosting flow:
 
 1. Build and validate the exact source.
@@ -308,6 +346,8 @@ Sites source credentials are short-lived. Obtain a fresh credential when require
 
 - Read `README.md`, this file, `app/youtube-player.tsx`, `app/login-client.tsx`, `public/sw.js` and the final YouTube test block in `tests/import-parser.test.ts`.
 - Run `git status -sb` and confirm `main` is clean and tracking `origin/main`.
+- `HANDOVER.md` 有任何修改時，確認修改已 commit/push，並以
+  `origin/main` 的 SHA 或內容核對 GitHub 已同步。
 - Before touching authentication, inspect Sites environment configuration; never infer or overwrite the existing secret value.
 - Before changing service-worker behavior, test both authenticated online navigation and offline lesson navigation on iPhone-sized viewport.
 - Before changing resume behavior, test at least three consecutive cycles, not only the first return.
