@@ -9,6 +9,8 @@ import {
   listStoredSongs,
   saveStoredSong,
 } from "@/db";
+import { mirrorReadOnlyResponse } from "@/app/runtime-mode";
+import { dispatchMirrorUpdates } from "@/app/mirror-dispatch";
 
 function sameOrigin(request: Request): boolean {
   const origin = request.headers.get("origin");
@@ -16,6 +18,8 @@ function sameOrigin(request: Request): boolean {
 }
 
 export async function POST(request: Request) {
+  const readOnlyResponse = mirrorReadOnlyResponse();
+  if (readOnlyResponse) return readOnlyResponse;
   if (!(await requestIsAuthenticated(request))) {
     return Response.json({ error: "請先登入。" }, { status: 401 });
   }
@@ -64,6 +68,7 @@ export async function POST(request: Request) {
       )
       .map((stored) => stored.slug);
     await Promise.all(duplicateSlugs.map(deleteStoredSong));
+    dispatchMirrorUpdates();
     return Response.json({ song }, { status: 201 });
   } catch (error) {
     return Response.json(

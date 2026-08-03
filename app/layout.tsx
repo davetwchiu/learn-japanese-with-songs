@@ -3,6 +3,8 @@ import { headers } from "next/headers";
 import "./globals.css";
 import { isPasswordAuthenticated } from "./password-auth";
 import { LoginView } from "./login-client";
+import { isMirrorReadOnly } from "./runtime-mode";
+import { SiteModeProvider } from "./site-mode-client";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
@@ -69,9 +71,18 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const authenticated = await isPasswordAuthenticated();
+  const mirrorReadOnly = isMirrorReadOnly();
   return (
     <html lang="zh-HK">
-      <body>{authenticated ? children : <LoginView />}</body>
+      <body>
+        {authenticated ? (
+          <SiteModeProvider mirrorReadOnly={mirrorReadOnly}>
+            {children}
+          </SiteModeProvider>
+        ) : (
+          <LoginView />
+        )}
+      </body>
     </html>
   );
 }

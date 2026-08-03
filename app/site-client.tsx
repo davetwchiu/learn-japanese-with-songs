@@ -16,6 +16,7 @@ import {
   useState,
 } from "react";
 import { YouTubePlayer } from "./youtube-player";
+import { useSiteMode } from "./site-mode-client";
 
 function RubyText({ children }: { children: string }) {
   const pattern =
@@ -89,6 +90,7 @@ function messageServiceWorker(
 }
 
 export function SiteHeader() {
+  const { mirrorReadOnly } = useSiteMode();
   const [offlineStatus, setOfflineStatus] =
     useState<OfflineStatus>("idle");
 
@@ -202,7 +204,7 @@ export function SiteHeader() {
         <a href="/#songs">歌曲目錄</a>
         <a href="/grammar">文法索引</a>
         <a href="/vocabulary">生字索引</a>
-        <a href="/import">匯入課文</a>
+        {!mirrorReadOnly && <a href="/import">匯入課文</a>}
         <button
           className="offline-update"
           type="button"
@@ -226,13 +228,14 @@ export function SiteHeader() {
 }
 
 export function SiteFooter() {
+  const { mirrorReadOnly } = useSiteMode();
   return (
     <footer className="site-footer">
       <p>
         <strong>聽歌學日文</strong>
         <span>為初中級學習者整理的個人歌曲筆記。</span>
       </p>
-      <a href="/import">匯入新課文 →</a>
+      {!mirrorReadOnly && <a href="/import">匯入新課文 →</a>}
     </footer>
   );
 }
@@ -261,6 +264,7 @@ function SongCard({ song, number }: { song: Song; number: number }) {
 
 export function HomeView() {
   const songs = useLibrary();
+  const { mirrorReadOnly } = useSiteMode();
   const grammarCount = songs.reduce(
     (total, song) => total + song.grammar.length,
     0,
@@ -346,7 +350,7 @@ export function HomeView() {
                 <SongCard key={song.slug} song={song} number={index + 1} />
               ))}
             </div>
-            <div className="library-aside">
+            {!mirrorReadOnly && <div className="library-aside">
               <div className="aside-note import-note">
                 <span className="eyebrow">加入新課文</span>
                 <h3>由你手上的內容直接開始。</h3>
@@ -355,7 +359,7 @@ export function HomeView() {
                 </p>
                 <a href="/import">匯入課文 →</a>
               </div>
-            </div>
+            </div>}
           </div>
         </section>
       </main>
@@ -375,6 +379,7 @@ const songSections = [
 ] as const;
 
 export function SongView({ slug }: { slug: string }) {
+  const { mirrorReadOnly } = useSiteMode();
   const [song, setSong] = useState<Song | null | undefined>(() =>
     bundledSongs.find((item) => item.slug === slug),
   );
@@ -432,9 +437,11 @@ export function SongView({ slug }: { slug: string }) {
             <h1>{plainSongTitle(song.title)}</h1>
             <p className="song-artist">{song.artist}</p>
             <p className="song-summary">{song.summary}</p>
-            <a className="manage-link" href={`/songs/${song.slug}/manage`}>
-              管理課文與影片 →
-            </a>
+            {!mirrorReadOnly && (
+              <a className="manage-link" href={`/songs/${song.slug}/manage`}>
+                管理課文與影片 →
+              </a>
+            )}
           </div>
           {song.youtubeId ? (
             <YouTubePlayer
@@ -656,6 +663,7 @@ function LessonSection({
 
 export function IndexView({ kind }: { kind: "grammar" | "vocabulary" }) {
   const songs = useLibrary();
+  const { mirrorReadOnly } = useSiteMode();
   const [query, setQuery] = useState("");
   const isGrammar = kind === "grammar";
   const entries = useMemo(
@@ -708,9 +716,11 @@ export function IndexView({ kind }: { kind: "grammar" | "vocabulary" }) {
                 : "按讀音整理所有重點生字，直接回到歌曲中的實際用法。"}
             </p>
           </div>
-          <a className="index-import-link" href="/import">
-            匯入新課文 <span aria-hidden="true">→</span>
-          </a>
+          {!mirrorReadOnly && (
+            <a className="index-import-link" href="/import">
+              匯入新課文 <span aria-hidden="true">→</span>
+            </a>
+          )}
         </header>
 
         <div className="index-toolbar">

@@ -5,6 +5,8 @@ import {
   findStoredSong,
   saveStoredSong,
 } from "@/db";
+import { mirrorReadOnlyResponse } from "@/app/runtime-mode";
+import { dispatchMirrorUpdates } from "@/app/mirror-dispatch";
 
 function sameOrigin(request: Request): boolean {
   const origin = request.headers.get("origin");
@@ -29,6 +31,8 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ slug: string }> },
 ) {
+  const readOnlyResponse = mirrorReadOnlyResponse();
+  if (readOnlyResponse) return readOnlyResponse;
   if (!(await requestIsAuthenticated(request))) {
     return Response.json({ error: "請先登入。" }, { status: 401 });
   }
@@ -53,6 +57,7 @@ export async function PATCH(
     }
     const updated = { ...song, youtubeId };
     await saveStoredSong(updated);
+    dispatchMirrorUpdates();
     return Response.json({ song: updated });
   } catch (error) {
     return Response.json(
@@ -66,6 +71,8 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ slug: string }> },
 ) {
+  const readOnlyResponse = mirrorReadOnlyResponse();
+  if (readOnlyResponse) return readOnlyResponse;
   if (!(await requestIsAuthenticated(request))) {
     return Response.json({ error: "請先登入。" }, { status: 401 });
   }
@@ -80,6 +87,7 @@ export async function DELETE(
       return Response.json({ error: "找不到可刪除的課文。" }, { status: 404 });
     }
     await deleteStoredSong(slug);
+    dispatchMirrorUpdates();
     return Response.json({ deleted: true });
   } catch (error) {
     return Response.json(

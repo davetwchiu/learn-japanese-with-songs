@@ -1,27 +1,26 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "uta-nihongo-davetchiu",
+  "name": "uta-nihongo-mirror-retry",
   "account_id": "32b5e6213614abf2b305d2a3fce8db09",
+  "main": "worker/mirror-retry.ts",
   "compatibility_date": "2026-08-03",
   "compatibility_flags": [
     "nodejs_compat"
   ],
-  "main": "vinext/server/app-router-entry",
-  "assets": {
-    "directory": "dist/client",
-    "not_found_handling": "none",
-    "binding": "ASSETS"
-  },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "uta-nihongo-davetchiu-db",
-      "database_id": "133398ee-df1d-4a55-a7ea-1f88e418f83e",
-      "migrations_dir": "drizzle"
+      "database_id": "133398ee-df1d-4a55-a7ea-1f88e418f83e"
     }
   ],
   "vars": {
     "MIRROR_TARGET_URL": "https://uta-nihongo-davetchiu.davechiu.chatgpt.site/api/internal/mirror"
+  },
+  "triggers": {
+    "crons": [
+      "*/5 * * * *"
+    ]
   },
   "observability": {
     "enabled": true,

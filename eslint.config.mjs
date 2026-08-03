@@ -13,6 +13,7 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "worker-configuration.d.ts",
+    "worker-mirror-configuration.d.ts",
   ]),
 ]);
 

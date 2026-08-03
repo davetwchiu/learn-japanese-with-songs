@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { ImportView } from "./import-client";
+import { redirect } from "next/navigation";
+import { isMirrorReadOnly } from "../runtime-mode";
 
 export const metadata: Metadata = {
   title: "匯入課文",
@@ -7,5 +9,6 @@ export const metadata: Metadata = {
 };
 
 export default function ImportPage() {
+  if (isMirrorReadOnly()) redirect("/");
   return <ImportView />;
 }
