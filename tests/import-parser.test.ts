@@ -592,8 +592,8 @@ test("includes offline learning support and a manual update control", async () =
   assert.match(client, /isAppleMobileDevice/);
   assert.match(client, /registration\.unregister/);
   assert.match(client, /更新離線學習內容/);
-  assert.match(client, /\/aimyon-hero-poster\.webp/);
-  assert.match(worker, /\/aimyon-hero-poster\.webp/);
+  assert.match(client, /\/aimyon-poster-background\.webp/);
+  assert.match(worker, /\/aimyon-poster-background\.webp/);
   assert.match(login, /resetOfflineShell/);
   assert.match(login, /Promise\.race/);
   assert.match(login, /OFFLINE_RESET_WAIT_MS/);

@@ -281,14 +281,33 @@ export function HomeView() {
               </a>
             </div>
           </div>
-          <figure className="hero-poster">
+          <div className="hero-poster" aria-label="日文歌詞學習示意">
             <img
-              src="/aimyon-hero-poster.webp"
-              alt="言葉與音樂交織的聽歌學日文海報，配上あいみょん的淡色照片"
-              width="1254"
-              height="1254"
+              className="poster-photo"
+              src="/aimyon-poster-background.webp"
+              alt=""
+              aria-hidden="true"
+              width="1200"
+              height="900"
             />
-          </figure>
+            <span className="poster-kana">うた</span>
+            <span className="poster-note" aria-hidden="true">
+              ♪
+            </span>
+            <ruby>
+              言葉<rt>ことば</rt>
+            </ruby>
+            <strong>×</strong>
+            <ruby>
+              音楽<rt>おんがく</rt>
+            </ruby>
+            <div className="sound-wave" aria-hidden="true">
+              {Array.from({ length: 15 }, (_, index) => (
+                <i key={index} />
+              ))}
+            </div>
+            <small>聽見語感・讀懂意思・帶走句型</small>
+          </div>
         </section>
 
         <section className="stat-strip" aria-label="網站內容統計">

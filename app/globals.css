@@ -278,15 +278,136 @@ rt {
 
 .hero-poster {
   align-self: center;
-  margin: 0;
-  max-width: 560px;
-  width: 100%;
+  aspect-ratio: 0.86;
+  background:
+    linear-gradient(rgba(32, 43, 67, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(32, 43, 67, 0.035) 1px, transparent 1px),
+    var(--white);
+  background-size: 30px 30px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-height: 560px;
+  max-width: 500px;
+  overflow: hidden;
+  padding: clamp(34px, 5vw, 68px);
+  position: relative;
+  transform: rotate(2deg);
 }
 
-.hero-poster img {
-  display: block;
-  height: auto;
+.poster-photo {
+  filter: saturate(0.55) contrast(0.72) brightness(1.18);
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+  object-position: 58% center;
+  opacity: 0.22;
+  position: absolute;
+  transform: scale(1.04);
   width: 100%;
+  z-index: 0;
+}
+
+.hero-poster::before {
+  background: var(--red);
+  border-radius: 50%;
+  content: "";
+  height: 180px;
+  position: absolute;
+  right: -48px;
+  top: -44px;
+  width: 180px;
+  z-index: 1;
+}
+
+.hero-poster::after {
+  border: 10px solid var(--green);
+  border-radius: 50%;
+  bottom: 42px;
+  content: "";
+  height: 100px;
+  position: absolute;
+  right: -42px;
+  width: 100px;
+  z-index: 1;
+}
+
+.poster-kana {
+  color: var(--green);
+  font-weight: 800;
+  letter-spacing: 0.4em;
+  position: absolute;
+  right: 30px;
+  top: 150px;
+  writing-mode: vertical-rl;
+  z-index: 2;
+}
+
+.poster-note {
+  color: var(--red);
+  font-family: var(--serif);
+  font-size: clamp(64px, 8vw, 112px);
+  left: 38px;
+  line-height: 1;
+  opacity: 0.18;
+  position: absolute;
+  top: 36px;
+  z-index: 1;
+}
+
+.hero-poster ruby {
+  font-family: var(--serif);
+  font-size: clamp(46px, 5vw, 74px);
+  font-weight: 700;
+  line-height: 1.55;
+  position: relative;
+  z-index: 2;
+}
+
+.hero-poster > strong {
+  color: var(--red);
+  font-size: 32px;
+  margin: -4px 0;
+  padding-left: 56%;
+  position: relative;
+  z-index: 2;
+}
+
+.sound-wave {
+  align-items: center;
+  display: flex;
+  gap: 5px;
+  height: 62px;
+  margin: 28px 0 20px;
+  position: relative;
+  z-index: 2;
+}
+
+.sound-wave i {
+  background: var(--ink);
+  display: block;
+  height: 16px;
+  width: 4px;
+}
+
+.sound-wave i:nth-child(3n) {
+  height: 48px;
+}
+
+.sound-wave i:nth-child(2n) {
+  height: 30px;
+}
+
+.hero-poster small {
+  border-top: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  padding-top: 18px;
+  position: relative;
+  z-index: 2;
 }
 
 .stat-strip {
@@ -1678,7 +1799,8 @@ rt {
   }
 
   .hero-poster {
-    width: min(94vw, 560px);
+    padding: 42px;
+    transform: rotate(1deg);
   }
 
   .stat-strip {
