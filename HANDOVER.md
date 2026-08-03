@@ -1,20 +1,23 @@
 # 聽歌學日文 — Handover Notes
 
-最後更新：2026-08-02（Asia/Hong_Kong）
+最後更新：2026-08-03（Asia/Hong_Kong）
 
 ## 1. Current snapshot
 
 - GitHub content repository: <https://github.com/davetwchiu/learn-japanese-with-songs>
 - Production site: <https://uta-nihongo-davetchiu.davechiu.chatgpt.site>
+- Secondary Cloudflare site: <https://uta-nihongo-davetchiu.d-chiu.workers.dev>
 - Git branch: `main`
-- Handover 更新時的程式 HEAD: `20824bd5eafbad9adda2a02000f9a5d215ba6e18`
+- Cloudflare deployed source HEAD: `67ec50d`
 - OpenAI Sites project ID: `appgprj_6a6c04056b208191bd5167021ce39a3e`
-- Latest deployed Sites version: 25
+- Latest deployed Sites version: 26
 - Hosted environment revision: 3
 - Storage: D1 binding `DB`; no R2 binding
 - Access: public Sites URL，另有 app-owned password gate
 
-Handover 更新前已確認：本地 `main` 與 Sites source `origin/main` 同步在 `20824bd`，working tree clean。現時 `origin` 是 Sites source repository；上方 GitHub repository 仍由網站作舊有 JSON 課文內容來源之一，不要把兩者當成同一個 remote。
+現時 Git `origin` 是上方 GitHub repository。Cloudflare Worker 使用 commit
+`67ec50d` 部署；OpenAI Sites 仍是獨立 primary deployment，其 D1 沒有因
+Cloudflare 部署而修改或複製。兩個 D1 必須視為獨立資料來源。
 
 ## 2. Important security note
 
@@ -134,6 +137,9 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 | `drizzle/meta/0001_snapshot.json` | Migration snapshot。 |
 | `drizzle/meta/_journal.json` | Migration journal update。 |
 | `.openai/hosting.json` | Sites project ID、D1 logical binding、no R2。 |
+| `wrangler.jsonc` | Cloudflare Worker、assets、APAC D1、compatibility flags 和 observability 設定。 |
+| `worker-configuration.d.ts` | Wrangler 依目前 compatibility date／bindings 產生的 Cloudflare runtime types。 |
+| `vite.config.ts` | 保留原有 Sites／本機 binding；只有 `CLOUDFLARE_DEPLOY=1` 時使用獨立 Cloudflare config。 |
 
 ## 6. Relevant commits
 
@@ -159,6 +165,7 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 | `ab58d9b` | Show plain titles in song directory |
 | `489c1a8` | Read title kana from imported lessons |
 | `20824bd` | Keep title readings hidden from lessons |
+| `67ec50d` | Add Cloudflare Workers deployment |
 
 ## 7. Validation already performed
 
@@ -170,9 +177,12 @@ For the latest production source:
 - `public/sw.js` syntax check: passed.
 - `git diff --check`: passed.
 - Temporary player lifecycle test route was deleted before commit/deploy.
-- Production deploy succeeded as Sites version 25 using environment revision 3.
-- Sites source `main` was pushed and matched `origin/main` at `20824bd` before this handover update。
+- OpenAI Sites version 26 remains active using environment revision 3; its D1
+  was not copied into or modified by the Cloudflare deployment.
 - Production browser verification confirmed「スーパーガール」和「スケッチ」課文標題都沒有 ruby／括號假名；歌曲目錄亦只顯示純歌名。
+- Cloudflare build、Wrangler dry-run、TypeScript、ESLint、18/18 tests、service-worker syntax 和 `git diff --check` 均通過。
+- Cloudflare 未登入頁已在 Browser 確認；`/api/auth/status` 回報 `configured: true`，未登入 `/api/songs` 正確回應 401。
+- Cloudflare `site.webmanifest`、`sw.js`、icons 和 OG image 均回應 200；remote D1 `songs` table 及 migrations 已存在。
 
 ## 8. Known limitations and trade-offs
 
@@ -235,35 +245,62 @@ Sites source credentials are short-lived. Obtain a fresh credential when require
 - `titleReading` 只供排序；不要重新加到目錄卡片或課文標題。新增課文格式時保留最後一行 `歌名讀音：……`。
 - Treat the deployed URL as production; do not use it for destructive test data.
 
-## 12. Cloudflare dual-hosting plan (paused)
+## 12. Cloudflare dual hosting (deployed; authenticated checks pending)
 
-Owner wants to keep the current OpenAI Sites production deployment and add an
-independent free Cloudflare deployment as a secondary copy. The preferred
-target is Cloudflare Workers + D1 because the existing vinext build and `DB`
-binding are already Worker-compatible. Do not replace, disconnect or otherwise
-modify the current OpenAI Sites project while adding this copy.
+The existing OpenAI Sites deployment remains the primary site. A separate
+Cloudflare Workers + D1 copy is now deployed as a secondary instance; do not
+replace, disconnect or modify the OpenAI Sites project or its D1 when operating
+the Cloudflare copy.
 
-Status as of 2026-08-02:
+Status as of 2026-08-03:
 
-- Cloudflare plugin was installed, but no Cloudflare Worker, D1 database,
-  secret, domain or deployment was created.
-- Wrangler OAuth was attempted, but the owner was using the iPhone app remotely
-  against the local Mac. Its localhost browser callback could not be completed.
-- No source files, Git remotes, OpenAI Sites settings or production data were
-  changed by the attempt.
-- Work is intentionally paused until the owner is back at the Mac or can connect
-  the Cloudflare plugin directly through ChatGPT.
+- Worker: `uta-nihongo-davetchiu`
+- URL: <https://uta-nihongo-davetchiu.d-chiu.workers.dev>
+- Deployed source commit: `67ec50d` (`main`, pushed to GitHub)
+- Initial Worker version: `425eabd6-3178-4904-9a11-7557eb310ef4`
+- Secret deployment version: `ad606f99-f74d-49e8-9500-c4fecf6d0126`
+- D1: `uta-nihongo-davetchiu-db`
+- D1 ID: `133398ee-df1d-4a55-a7ea-1f88e418f83e`
+- D1 location: APAC; logical binding remains `DB`.
+- Migrations `0000_brief_lockjaw.sql` and
+  `0001_normalize_grammar_titles.sql` were applied successfully.
+- `SITE_PASSWORD` exists as a Cloudflare `secret_text`. Its value was entered by
+  the owner in Cloudflare Dashboard and was never read, copied or stored by the
+  deployment process.
+- Remote D1 currently contains zero `songs`. No OpenAI Sites D1 rows were copied.
 
-When resuming:
+Verified on the Cloudflare deployment:
 
-1. Authenticate Cloudflare without sharing an API token or password in chat.
-2. Create a separate D1 database and Worker; keep the logical binding name
-   `DB`, and set `SITE_PASSWORD` as a Cloudflare secret.
-3. Apply the existing `drizzle/*.sql` migrations, deploy the current validated
-   source, and verify login, GitHub-backed lessons, D1 import/manage flows, PWA
-   caching and YouTube playback on the new URL.
-4. Do not assume the OpenAI Sites D1 contents have been copied. Export and
-   reconcile any D1-only lessons before treating Cloudflare as a full backup.
-5. Consider automatic mirroring only after both deployments are stable. This is
-   a nice-to-have and should be postponed if it adds risky two-way sync or could
-   overwrite newer lesson data.
+- Public Worker URL and password page render successfully in the in-app Browser.
+- Auth status reports that the password is configured; unauthenticated lesson
+  API access is rejected with 401.
+- Static PWA assets, manifest, service worker, icons and OG image return 200.
+- Remote D1 schema and migrations are present and the Worker has both `DB` and
+  `ASSETS` bindings.
+- Cloudflare build, dry-run, TypeScript, ESLint, 18 tests and service-worker
+  syntax checks passed before deployment.
+
+Still requiring an owner-authenticated Browser session:
+
+1. Log in to the Cloudflare URL and confirm the GitHub-backed lesson catalogue.
+2. Open an existing lesson and confirm the inline YouTube player loads.
+3. Check import/manage pages against the new D1. Avoid creating destructive test
+   data unless the owner explicitly wants it retained.
+4. Exercise PWA/offline caching on the target iPhone. Browser desktop checks do
+   not prove physical iPhone Safari behavior.
+
+Cloudflare deployment commands:
+
+```bash
+CLOUDFLARE_DEPLOY=1 npm run build
+npx wrangler deploy
+```
+
+Run `npx wrangler types` after changing `wrangler.jsonc`. Apply future D1
+migrations to the Cloudflare database explicitly and verify the target before
+running them. Normal Sites/local builds must not set `CLOUDFLARE_DEPLOY=1`.
+
+The Cloudflare instance is not yet a full data backup. Export and reconcile any
+D1-only lessons from OpenAI Sites before describing it as one. Automatic
+two-way mirroring remains postponed because it could overwrite newer lesson
+data.
