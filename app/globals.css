@@ -1722,8 +1722,9 @@ rt {
 
   .lesson-toc {
     background: var(--paper);
-    overflow-x: auto;
-    position: static;
+    position: sticky;
+    top: 82px;
+    z-index: 10;
   }
 
   .lesson-toc > .eyebrow,
@@ -1734,7 +1735,12 @@ rt {
   .lesson-toc nav {
     display: flex;
     margin-top: 0;
+    overflow-x: auto;
     white-space: nowrap;
+  }
+
+  .lesson-section {
+    scroll-margin-top: 140px;
   }
 
   .lesson-toc nav a {
@@ -1856,6 +1862,10 @@ rt {
   .song-page {
     padding-left: 18px;
     padding-right: 18px;
+  }
+
+  .lesson-toc {
+    top: 72px;
   }
 
   .song-hero h1 {
