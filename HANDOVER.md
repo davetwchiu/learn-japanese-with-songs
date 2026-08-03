@@ -8,15 +8,15 @@
 - Primary full-function site: <https://uta-nihongo-davetchiu.d-chiu.workers.dev>
 - OpenAI read-only mirror: <https://uta-nihongo-davetchiu.davechiu.chatgpt.site>
 - Git branch: `main`
-- Cloudflare deployed source HEAD: `7cbd495`
+- Cloudflare deployed source HEAD: `cafbee6`
 - OpenAI Sites project ID: `appgprj_6a6c04056b208191bd5167021ce39a3e`
-- Latest deployed Sites version: 32
+- Latest deployed Sites version: 33
 - Hosted environment revision: 4
 - Storage: D1 binding `DB`; no R2 binding
 - Access: public Sites URL，另有 app-owned password gate
 
 現時 Git `origin` 是上方 GitHub repository。Cloudflare Worker 和 OpenAI
-Sites version 32 都使用 commit `7cbd495`。Cloudflare 是唯一正常寫入來源；
+Sites version 33 都使用 commit `cafbee6`。Cloudflare 是唯一正常寫入來源；
 OpenAI Sites 以 `MIRROR_READ_ONLY=1` 運行，會隱藏匯入／管理入口並拒絕
 POST、PATCH、DELETE，但相關程式碼沒有刪除。兩個 D1 仍是獨立 database，
 由已簽署的單向同步保持內容一致。
@@ -112,7 +112,7 @@ Production password 是 Sites runtime secret，不在 repository 內。
 
 1. 在 OpenAI Sites environment variables 把 `MIRROR_READ_ONLY` 改為 `0`
    （或移除）。不要移除 `SITE_PASSWORD` 或 D1 binding。
-2. 重新 deploy 最新已儲存的 production version（目前是 version 32），令新
+2. 重新 deploy 最新已儲存的 production version（目前是 version 33），令新
    environment revision 生效。
 3. 確認 `/import` 和課文的「管理課文與影片」連結重新出現；現有相同原始碼
    即恢復匯入、更新和刪除功能，無需改 code。
@@ -145,13 +145,13 @@ API 成功後，會無限期等待 Cache Storage 清理完成才 reload；裝置
 
 ### 3.8 Aimyon homepage artwork
 
-- 首頁右側主視覺改用 owner 確認的あいみょん淡色合成海報。
-- 原始 1254×1254 PNG 已轉成 1254×1254 WebP；檔案約 109 KB，保留清晰文字
-  同時減少首頁下載量。
-- 舊的 CSS／HTML 海報重繪已移除，避免新圖與舊文字、幾何圖形重疊。
-- 圖片有固定尺寸及描述性 alt text，responsive layout 會在 desktop／mobile
-  按可用寬度縮放。
-- Service worker core cache 包含 `/aimyon-hero-poster.webp`，離線首頁亦可顯示。
+- 首頁右側主視覺保留原有 HTML/CSS 海報：文字、ruby、聲波、方格、紅色圓形
+  和綠色圓環仍是獨立可編輯元素。
+- Aimyon 原相只作 absolute background layer；CSS 使用低飽和、低對比、提高
+  亮度及 22% opacity，文字和圖形維持清晰前景。
+- 相片已轉成 1200×900 WebP，約 49 KB；`object-position` 可獨立微調人物位置。
+- 先前把整張合成海報做成單一 bitmap 的版本已移除；Git history 仍可復原。
+- Service worker core cache 包含 `/aimyon-poster-background.webp`，離線首頁亦可顯示。
 
 ## 4. iPhone/YouTube debugging history
 
@@ -192,12 +192,12 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 | File | Main responsibility / changes |
 | --- | --- |
 | `app/youtube-player.tsx` | 新增 YouTube IFrame API wrapper、lifecycle state、resume storage、auto-resume、stable verification、4-second pause grace、floating-button state 和 runtime guards。 |
-| `app/site-client.tsx` | 課堂頁改用 `YouTubePlayer`；包含 offline registration、lesson asset caching、manual refresh flow；目錄和課文標題只用 `plainSongTitle()` 顯示純歌名；首頁使用 Aimyon 海報圖片。 |
-| `app/globals.css` | Player layout、fixed floating resume button、triangle icon、safe-area/mobile styles、offline UI styles，以及 responsive homepage artwork。 |
+| `app/site-client.tsx` | 課堂頁改用 `YouTubePlayer`；包含 offline registration、lesson asset caching、manual refresh flow；目錄和課文標題只用 `plainSongTitle()` 顯示純歌名；首頁海報保留原生元素並加入 Aimyon 背景層。 |
+| `app/globals.css` | Player layout、fixed floating resume button、triangle icon、safe-area/mobile styles、offline UI styles，以及 Aimyon photo wash/background stacking。 |
 | `app/login-client.tsx` | 登入成功後清除 cached login/navigation documents，然後 reload。 |
 | `public/sw.js` | Offline cache、network-first navigation、cache version bump、API exclusions、refresh bypass 和 fallback page。 |
 | `tests/import-parser.test.ts` | Parser、歌名讀音、50 音排序、純歌名、ruby、offline、PWA、homepage artwork、login fallback、logout removal 和 YouTube-resume assertions；目前共 24 tests。 |
-| `public/aimyon-hero-poster.webp` | Owner 確認的首頁 Aimyon 淡色合成海報，1254×1254、約 109 KB。 |
+| `public/aimyon-poster-background.webp` | 首頁海報的 Aimyon 淡色背景相片，1200×900、約 49 KB；文字和圖形不在此 bitmap 內。 |
 | `app/api/auth/[action]/route.ts` | JSON login、無 JavaScript native-form fallback、no-store response；不再提供 logout。 |
 | `app/import-parser.ts` | Flexible lesson parsing、自動 ruby、inflection handling；讀取課文最後的 `歌名讀音：`。 |
 | `app/import/import-client.tsx` | Import UI 配合 parser/ruby 行為；不再要求使用者另填歌名假名。 |
@@ -250,6 +250,7 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 | `5a06b8e` | Make login resilient and remove logout |
 | `6103e65` | Fix vocabulary ruby rendering |
 | `7cbd495` | Add Aimyon homepage artwork |
+| `cafbee6` | Layer Aimyon photo behind homepage poster |
 
 ## 7. Validation already performed
 
@@ -293,10 +294,12 @@ For the latest production source:
   「ラッキーカラー」首四張生字卡沒有任何括號假名；`意味`、`勘違`、`今日中`、
   `仕事`、`終`、`迎`、`朝`、`最終日` 均是 native ruby/rt。Mirror 仍沒有匯入
   或管理入口；Cloudflare D1 現有 22 首唯一歌曲，`mirror_outbox` 為 0。
-- Aimyon artwork validation：normal／Cloudflare builds、TypeScript、ESLint、
-  Wrangler dry-run、service-worker syntax、`git diff --check` 及 24/24 tests
-  均通過。WebP asset 約 109 KB，已包含在兩個 production artifact 及 offline
-  core cache；OpenAI Sites 繼續使用 environment revision 4／唯讀模式。
+- Aimyon HTML/CSS background validation：normal／Cloudflare builds、TypeScript、
+  ESLint、Wrangler dry-run、service-worker syntax、`git diff --check` 及 24/24
+  tests 均通過。約 49 KB background asset 在兩個 production URL 的 GET 均回應
+  200，並已加入 offline core cache；OpenAI Sites version 33 繼續使用
+  environment revision 4／唯讀模式，Cloudflare version 為
+  `b1cabb6b-90d9-4340-9b44-b62e4f8fede4`。
 
 ## 8. Known limitations and trade-offs
 
@@ -419,14 +422,14 @@ Status as of 2026-08-03:
 
 - Primary Worker: `uta-nihongo-davetchiu`
 - Primary URL: <https://uta-nihongo-davetchiu.d-chiu.workers.dev>
-- Primary Worker version: `718c7b8d-68a8-4170-b15c-d83ea444447f`
+- Primary Worker version: `b1cabb6b-90d9-4340-9b44-b62e4f8fede4`
 - Retry Worker: `uta-nihongo-mirror-retry`
 - Retry Worker code version: `74cbf77b-e6b0-4e80-b9b4-bfc9e3dae50f`
 - Retry Worker current secret-change version: `0069df36-cf43-4e32-a718-fb027835df5b`
 - Retry schedule: `*/5 * * * *`
 - OpenAI mirror: <https://uta-nihongo-davetchiu.davechiu.chatgpt.site>
-- OpenAI Sites version: 32; environment revision: 4
-- Deployed source commit: `7cbd495` (`main`, pushed to GitHub and Sites source)
+- OpenAI Sites version: 33; environment revision: 4
+- Deployed source commit: `cafbee6` (`main`, pushed to GitHub and Sites source)
 - D1: `uta-nihongo-davetchiu-db`
 - D1 ID: `133398ee-df1d-4a55-a7ea-1f88e418f83e`
 - D1 location: APAC; logical binding remains `DB`.
