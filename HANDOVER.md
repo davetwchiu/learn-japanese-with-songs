@@ -131,8 +131,8 @@ API 成功後，會無限期等待 Cache Storage 清理完成才 reload；裝置
 - Login form 有原生 `action`、`method` 和 input `name`；即使 client JavaScript
   或舊 bundle 未能載入，browser 仍可直接 POST 密碼。成功會以 303 + session
   cookie 返回首頁；失敗會顯示簡單錯誤頁。
-- Auth status、JSON login 及 native-form login response 都使用
-  `Cache-Control: no-store`。
+- Auth status、成功的 JSON login，以及 native-form 的成功／失敗 response
+  都使用 `Cache-Control: no-store`。
 - Service worker cache 升級至 `uta-nihongo-offline-v3`，首次載入會清除 v2。
 - Owner 不需要手動登出，因此 header 的「登出」、client logout flow、
   `/api/auth/logout` handling 和 cookie-clear helper 已全部移除。現有 session
