@@ -64,6 +64,29 @@ export function plainSongTitle(title: string): string {
     .replace(/([\p{Script=Han}々〆ヶ]+)[（(][ぁ-ゖァ-ヺー・]+[）)]/gu, "$1");
 }
 
+export function normalizeRubyAnnotations(value: string): string {
+  return String(value ?? "").replace(
+    /([\p{Script=Han}々〆ヶ]+[ぁ-ゖァ-ヺー]*)[（(]([ぁ-ゖァ-ヺー・]+)[）)]/gu,
+    "[$1]{$2}",
+  );
+}
+
+function normalizeVocabulary(value: unknown): Vocabulary {
+  const word = (value ?? {}) as Partial<Vocabulary>;
+  return {
+    id: String(word.id ?? "").trim(),
+    term: String(word.term ?? "").trim(),
+    reading: String(word.reading ?? "").trim(),
+    partOfSpeech: normalizeRubyAnnotations(
+      String(word.partOfSpeech ?? "").trim(),
+    ),
+    meaning: normalizeRubyAnnotations(String(word.meaning ?? "").trim()),
+    note: normalizeRubyAnnotations(String(word.note ?? "").trim()),
+    exampleJp: normalizeRubyAnnotations(String(word.exampleJp ?? "").trim()),
+    exampleZh: normalizeRubyAnnotations(String(word.exampleZh ?? "").trim()),
+  };
+}
+
 export function normalizeGrammarHeading(grammar: Grammar): Grammar {
   const item = (grammar ?? {}) as Grammar;
   const pattern = String(item.pattern ?? "").trim();
@@ -97,7 +120,9 @@ export function normalizeSong(value: unknown): Song {
     grammar: Array.isArray(song.grammar)
       ? song.grammar.map(normalizeGrammarHeading)
       : [],
-    vocabulary: Array.isArray(song.vocabulary) ? song.vocabulary : [],
+    vocabulary: Array.isArray(song.vocabulary)
+      ? song.vocabulary.map(normalizeVocabulary)
+      : [],
     spoken: Array.isArray(song.spoken) ? song.spoken : [],
     pitfalls: Array.isArray(song.pitfalls) ? song.pitfalls : [],
     phrases: Array.isArray(song.phrases) ? song.phrases : [],

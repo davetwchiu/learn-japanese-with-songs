@@ -558,13 +558,21 @@ export function SongView({ slug }: { slug: string }) {
                           <rt>{word.reading}</rt>
                         </ruby>
                       </h3>
-                      <span>{word.partOfSpeech}</span>
+                      <span>
+                        <RubyText>{word.partOfSpeech}</RubyText>
+                      </span>
                     </div>
-                    <strong>{word.meaning}</strong>
-                    <p>{word.note}</p>
+                    <strong>
+                      <RubyText>{word.meaning}</RubyText>
+                    </strong>
+                    <p>
+                      <RubyText>{word.note}</RubyText>
+                    </p>
                     <small>
                       <RubyText>{word.exampleJp}</RubyText>
-                      <i>{word.exampleZh}</i>
+                      <i>
+                        <RubyText>{word.exampleZh}</RubyText>
+                      </i>
                     </small>
                   </article>
                 ))}

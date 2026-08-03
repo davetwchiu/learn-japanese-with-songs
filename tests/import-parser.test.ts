@@ -8,11 +8,43 @@ import {
 import {
   compareSongsByGojūon,
   loadSongLibrary,
+  normalizeRubyAnnotations,
   normalizeSong,
   plainSongTitle,
   type Song,
   vocabularySortKey,
 } from "../app/song-data";
+
+test("normalizes parenthesized vocabulary readings to canonical ruby markup", () => {
+  assert.equal(
+    normalizeRubyAnnotations(
+      "例：意味（いみ）を勘違（かんちが）いしていた。",
+    ),
+    "例：[意味]{いみ}を[勘違]{かんちが}いしていた。",
+  );
+
+  const song = normalizeSong({
+    slug: "lucky-color",
+    title: "ラッキーカラー",
+    vocabulary: [
+      {
+        id: "misunderstanding",
+        term: "勘違い",
+        reading: "かんちがい",
+        partOfSpeech: "名詞、する動詞",
+        meaning: "誤會、誤解",
+        note: "",
+        exampleJp: "「勘違いする」是弄錯、誤以為。",
+        exampleZh: "例：意味（いみ）を勘違（かんちが）いしていた。",
+      },
+    ],
+  });
+
+  assert.equal(
+    song.vocabulary[0].exampleZh,
+    "例：[意味]{いみ}を[勘違]{かんちが}いしていた。",
+  );
+});
 
 const pasted = `# 《春の道》日文歌詞學習材料
 
@@ -512,6 +544,25 @@ test("removes the unneeded eight-angles block from the site", async () => {
     "utf8",
   );
   assert.doesNotMatch(source, /ONE SONG, EIGHT ANGLES|八個學習入口/);
+});
+
+test("renders ruby annotations from every vocabulary text field", async () => {
+  const source = await readFile(
+    new URL("../app/site-client.tsx", import.meta.url),
+    "utf8",
+  );
+  for (const field of [
+    "word.partOfSpeech",
+    "word.meaning",
+    "word.note",
+    "word.exampleJp",
+    "word.exampleZh",
+  ]) {
+    assert.match(
+      source,
+      new RegExp(`<RubyText>\\{${field.replace(".", "\\.")}\\}</RubyText>`),
+    );
+  }
 });
 
 test("includes offline learning support and a manual update control", async () => {
