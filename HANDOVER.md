@@ -234,3 +234,36 @@ Sites source credentials are short-lived. Obtain a fresh credential when require
 - Before changing resume behavior, test at least three consecutive cycles, not only the first return.
 - `titleReading` 只供排序；不要重新加到目錄卡片或課文標題。新增課文格式時保留最後一行 `歌名讀音：……`。
 - Treat the deployed URL as production; do not use it for destructive test data.
+
+## 12. Cloudflare dual-hosting plan (paused)
+
+Owner wants to keep the current OpenAI Sites production deployment and add an
+independent free Cloudflare deployment as a secondary copy. The preferred
+target is Cloudflare Workers + D1 because the existing vinext build and `DB`
+binding are already Worker-compatible. Do not replace, disconnect or otherwise
+modify the current OpenAI Sites project while adding this copy.
+
+Status as of 2026-08-02:
+
+- Cloudflare plugin was installed, but no Cloudflare Worker, D1 database,
+  secret, domain or deployment was created.
+- Wrangler OAuth was attempted, but the owner was using the iPhone app remotely
+  against the local Mac. Its localhost browser callback could not be completed.
+- No source files, Git remotes, OpenAI Sites settings or production data were
+  changed by the attempt.
+- Work is intentionally paused until the owner is back at the Mac or can connect
+  the Cloudflare plugin directly through ChatGPT.
+
+When resuming:
+
+1. Authenticate Cloudflare without sharing an API token or password in chat.
+2. Create a separate D1 database and Worker; keep the logical binding name
+   `DB`, and set `SITE_PASSWORD` as a Cloudflare secret.
+3. Apply the existing `drizzle/*.sql` migrations, deploy the current validated
+   source, and verify login, GitHub-backed lessons, D1 import/manage flows, PWA
+   caching and YouTube playback on the new URL.
+4. Do not assume the OpenAI Sites D1 contents have been copied. Export and
+   reconcile any D1-only lessons before treating Cloudflare as a full backup.
+5. Consider automatic mirroring only after both deployments are stable. This is
+   a nice-to-have and should be postponed if it adds risky two-way sync or could
+   overwrite newer lesson data.
