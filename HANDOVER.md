@@ -8,15 +8,15 @@
 - Primary full-function site: <https://uta-nihongo-davetchiu.d-chiu.workers.dev>
 - OpenAI read-only mirror: <https://uta-nihongo-davetchiu.davechiu.chatgpt.site>
 - Git branch: `main`
-- Cloudflare deployed source HEAD: `cafbee6`
+- Cloudflare deployed source HEAD: `02581e6`
 - OpenAI Sites project ID: `appgprj_6a6c04056b208191bd5167021ce39a3e`
-- Latest deployed Sites version: 33
+- Latest deployed Sites version: 34
 - Hosted environment revision: 4
 - Storage: D1 binding `DB`; no R2 binding
 - Access: public Sites URL，另有 app-owned password gate
 
 現時 Git `origin` 是上方 GitHub repository。Cloudflare Worker 和 OpenAI
-Sites version 33 都使用 commit `cafbee6`。Cloudflare 是唯一正常寫入來源；
+Sites version 34 都使用 commit `02581e6`。Cloudflare 是唯一正常寫入來源；
 OpenAI Sites 以 `MIRROR_READ_ONLY=1` 運行，會隱藏匯入／管理入口並拒絕
 POST、PATCH、DELETE，但相關程式碼沒有刪除。兩個 D1 仍是獨立 database，
 由已簽署的單向同步保持內容一致。
@@ -112,7 +112,7 @@ Production password 是 Sites runtime secret，不在 repository 內。
 
 1. 在 OpenAI Sites environment variables 把 `MIRROR_READ_ONLY` 改為 `0`
    （或移除）。不要移除 `SITE_PASSWORD` 或 D1 binding。
-2. 重新 deploy 最新已儲存的 production version（目前是 version 33），令新
+2. 重新 deploy 最新已儲存的 production version（目前是 version 34），令新
    environment revision 生效。
 3. 確認 `/import` 和課文的「管理課文與影片」連結重新出現；現有相同原始碼
    即恢復匯入、更新和刪除功能，無需改 code。
@@ -152,6 +152,16 @@ API 成功後，會無限期等待 Cache Storage 清理完成才 reload；裝置
 - 相片已轉成 1200×900 WebP，約 49 KB；`object-position` 可獨立微調人物位置。
 - 先前把整張合成海報做成單一 bitmap 的版本已移除；Git history 仍可復原。
 - Service worker core cache 包含 `/aimyon-poster-background.webp`，離線首頁亦可顯示。
+
+### 3.9 Sticky mobile lesson menu
+
+- Tablet／iPhone 課文目錄仍保留在 inline player 下方，未到達主導覽列前會隨
+  課文正常捲動。
+- 目錄到達 sticky 主導覽列底部後會固定在其下；使用者向上捲回 player 時會
+  自然返回原位，沒有複製第二條目錄或加入 JavaScript observer。
+- 橫向捲動移到目錄內的 `nav`，避免 scroll container 影響外層 sticky。
+- Tablet offset 是 82px，iPhone breakpoint 是 72px；章節 anchor 亦預留兩條
+  導覽列的高度，避免點擊後標題被遮住。
 
 ## 4. iPhone/YouTube debugging history
 
@@ -193,7 +203,7 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 | --- | --- |
 | `app/youtube-player.tsx` | 新增 YouTube IFrame API wrapper、lifecycle state、resume storage、auto-resume、stable verification、4-second pause grace、floating-button state 和 runtime guards。 |
 | `app/site-client.tsx` | 課堂頁改用 `YouTubePlayer`；包含 offline registration、lesson asset caching、manual refresh flow；目錄和課文標題只用 `plainSongTitle()` 顯示純歌名；首頁海報保留原生元素並加入 Aimyon 背景層。 |
-| `app/globals.css` | Player layout、fixed floating resume button、triangle icon、safe-area/mobile styles、offline UI styles，以及 Aimyon photo wash/background stacking。 |
+| `app/globals.css` | Player layout、fixed floating resume button、triangle icon、safe-area/mobile styles、sticky mobile lesson menu、offline UI styles，以及 Aimyon photo wash/background stacking。 |
 | `app/login-client.tsx` | 登入成功後清除 cached login/navigation documents，然後 reload。 |
 | `public/sw.js` | Offline cache、network-first navigation、cache version bump、API exclusions、refresh bypass 和 fallback page。 |
 | `tests/import-parser.test.ts` | Parser、歌名讀音、50 音排序、純歌名、ruby、offline、PWA、homepage artwork、login fallback、logout removal 和 YouTube-resume assertions；目前共 24 tests。 |
@@ -251,6 +261,7 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 | `6103e65` | Fix vocabulary ruby rendering |
 | `7cbd495` | Add Aimyon homepage artwork |
 | `cafbee6` | Layer Aimyon photo behind homepage poster |
+| `02581e6` | Keep mobile lesson menu visible |
 
 ## 7. Validation already performed
 
@@ -300,6 +311,13 @@ For the latest production source:
   200，並已加入 offline core cache；OpenAI Sites version 33 繼續使用
   environment revision 4／唯讀模式，Cloudflare version 為
   `b1cabb6b-90d9-4340-9b44-b62e4f8fede4`。
+- Sticky lesson menu validation：normal／Cloudflare builds、TypeScript、ESLint、
+  24/24 tests、兩個 Wrangler dry-run、service-worker syntax 及
+  `git diff --check` 均通過。兩個 production URL 均回應 200，實際 production
+  CSS 均包含 tablet 82px／iPhone 72px sticky offset；OpenAI Sites version 34
+  使用 environment revision 4 並保持 `MIRROR_READ_ONLY=1`，Cloudflare version
+  為 `a0dbfc1c-7cd8-407f-8b07-e6c9901cc6f3`。Cloudflare D1 有 23 首歌／23 個
+  unique slug，`mirror_outbox` 為 0。
 
 ## 8. Known limitations and trade-offs
 
@@ -422,19 +440,19 @@ Status as of 2026-08-03:
 
 - Primary Worker: `uta-nihongo-davetchiu`
 - Primary URL: <https://uta-nihongo-davetchiu.d-chiu.workers.dev>
-- Primary Worker version: `b1cabb6b-90d9-4340-9b44-b62e4f8fede4`
+- Primary Worker version: `a0dbfc1c-7cd8-407f-8b07-e6c9901cc6f3`
 - Retry Worker: `uta-nihongo-mirror-retry`
 - Retry Worker code version: `74cbf77b-e6b0-4e80-b9b4-bfc9e3dae50f`
 - Retry Worker current secret-change version: `0069df36-cf43-4e32-a718-fb027835df5b`
 - Retry schedule: `*/5 * * * *`
 - OpenAI mirror: <https://uta-nihongo-davetchiu.davechiu.chatgpt.site>
-- OpenAI Sites version: 33; environment revision: 4
-- Deployed source commit: `cafbee6` (`main`, pushed to GitHub and Sites source)
+- OpenAI Sites version: 34; environment revision: 4
+- Deployed source commit: `02581e6` (`main`, pushed to GitHub and Sites source)
 - D1: `uta-nihongo-davetchiu-db`
 - D1 ID: `133398ee-df1d-4a55-a7ea-1f88e418f83e`
 - D1 location: APAC; logical binding remains `DB`.
 - Migrations `0000`, `0001` and `0002` were applied successfully.
-- Cloudflare D1 has 22 songs / 22 unique slugs; outbox was 0 after the final
+- Cloudflare D1 has 23 songs / 23 unique slugs; outbox was 0 after the final
   end-to-end validation.
 
 Both sites keep the existing password gate. `SITE_PASSWORD` and
