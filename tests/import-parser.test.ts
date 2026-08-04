@@ -135,6 +135,17 @@ test("reads the song title reading from the final lesson line", () => {
   assert.equal(song.titleReading, "さくらがふるよるは");
 });
 
+test("keeps a final song title reading out of displayed lesson text", () => {
+  const song = parseImportedLesson(`自訂課文
+
+今日はいい天気です。
+
+歌名讀音：じていかぶん`);
+  assert.equal(song.titleReading, "じていかぶん");
+  assert.equal(song.rawText, "自訂課文\n\n今日はいい天気です。");
+  assert.doesNotMatch(song.rawText ?? "", /歌名讀音/);
+});
+
 test("accepts different heading levels, bold metadata, and list examples", () => {
   const flexible = `前言可以放在歌曲資料之前。
 

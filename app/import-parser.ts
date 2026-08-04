@@ -78,6 +78,26 @@ function cleanMarkdown(value: string): string {
     .trim();
 }
 
+function splitTerminalTitleReading(text: string): {
+  lessonText: string;
+  titleReading: string;
+} {
+  const lines = text.split("\n");
+  let lastContentLine = lines.length - 1;
+  while (lastContentLine >= 0 && !lines[lastContentLine].trim()) {
+    lastContentLine -= 1;
+  }
+  const match = cleanMarkdown(lines[lastContentLine] ?? "").match(
+    /^歌名讀音\s*[：:]\s*(.+)$/u,
+  );
+  if (!match) return { lessonText: text, titleReading: "" };
+
+  return {
+    lessonText: lines.slice(0, lastContentLine).join("\n").trimEnd(),
+    titleReading: match[1].trim(),
+  };
+}
+
 type LessonSection =
   | "details"
   | "lyrics"
@@ -685,9 +705,10 @@ export function parseImportedLesson(
     }
   }
 
-  const text = /<([a-z][\w-]*)\b[^>]*>/i.test(unfenced)
+  const importedText = /<([a-z][\w-]*)\b[^>]*>/i.test(unfenced)
     ? htmlToText(unfenced)
     : unfenced.trim();
+  const { lessonText: text, titleReading } = splitTerminalTitleReading(importedText);
   const lines = text
     .split("\n")
     .map((line) => line.trim())
@@ -735,7 +756,8 @@ export function parseImportedLesson(
   return normalizeSong({
     slug: suppliedSlug || stableSlug(title),
     title,
-    titleReading: field(text, ["歌名讀音", "讀音", "假名", "reading"]),
+    titleReading:
+      titleReading || field(text, ["歌名讀音", "讀音", "假名", "reading"]),
     artist:
       field(text, ["歌", "歌手", "作者", "artist"]) || "匯入課文",
     level: field(text, ["程度", "級別", "level"]) || "未分類",
