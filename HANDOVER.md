@@ -8,22 +8,22 @@
 - Primary full-function site: <https://uta-nihongo-davetchiu.d-chiu.workers.dev>
 - OpenAI read-only mirror: <https://uta-nihongo-davetchiu.davechiu.chatgpt.site>
 - Git branch: `main`
-- Cloudflare deployed source HEAD: `a596711`
+- Cloudflare deployed source HEAD: `d3792df`
 - OpenAI Sites project ID: `appgprj_6a6c04056b208191bd5167021ce39a3e`
-- Latest deployed Sites version: 37
+- Latest deployed Sites version: 38
 - Hosted environment revision: 4
 - Storage: D1 binding `DB`; no R2 binding
 - Access: public Sites URL，另有 app-owned password gate
 
 現時 Git `origin` 是上方 GitHub repository。Cloudflare Worker 和 OpenAI
-Sites version 37 都使用 commit `a596711`。Cloudflare 是唯一正常寫入來源；
+Sites version 38 都使用 commit `d3792df`。Cloudflare 是唯一正常寫入來源；
 OpenAI Sites 以 `MIRROR_READ_ONLY=1` 運行，會隱藏匯入／管理入口並拒絕
 POST、PATCH、DELETE，但相關程式碼沒有刪除。兩個 D1 仍是獨立 database，
 由已簽署的單向同步保持內容一致。
 
 Runtime 發佈完成後另有一個只更新本文件的 Git commit；依 documentation-only
 規則沒有為該 commit 重複 deploy。兩個站的 runtime source 仍完全相同，都是
-已完整驗證的 `a596711`。
+已完整驗證的 `d3792df`。
 
 ## 2. Important security note
 
@@ -292,6 +292,7 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 | `56dc047` | Contain mobile lesson menu scrolling |
 | `19a7eff` | Add fixed lesson player controls |
 | `a596711` | Use default Node compatibility mode |
+| `d3792df` | Reflect YouTube playback state in controls |
 
 ## 7. Validation already performed
 
@@ -299,7 +300,7 @@ For the latest production source:
 
 - `vinext build`: passed.
 - ESLint: passed.
-- Node test runner: 22/22 passed.
+- Node test runner: 25/25 passed.
 - `public/sw.js` syntax check: passed.
 - `git diff --check`: passed.
 - Temporary player lifecycle test route was deleted before commit/deploy.
@@ -372,6 +373,14 @@ For the latest production source:
   後，version 37 成功發佈。Cloudflare 主 Worker version 是
   `785082ff-507f-41e1-b291-60a496f2028c`；remote D1 有 23 首歌／23 個 unique slug，
   `mirror_outbox` 為 0。
+- Playback-state highlight validation：normal／Cloudflare builds、TypeScript、
+  ESLint、25/25 tests、兩個 Wrangler dry-run、service-worker syntax 及
+  `git diff --check` 均通過。兩個 production 課文頁均確認初始狀態沒有 active
+  button；播放後 Play 的 `aria-pressed` 變為 true 並保持橙色，暫停後 active
+  state 和橙色轉到 Pause。OpenAI Sites version 38 使用 environment revision 4
+  並保持 `MIRROR_READ_ONLY=1`；Cloudflare 主 Worker version 是
+  `0f70a113-4c3a-4a62-8c45-02934d4d3328`。兩邊 runtime source 都是
+  `d3792df`；Cloudflare D1 有 23 首歌，`mirror_outbox` 為 0。
 
 ## 8. Known limitations and trade-offs
 
@@ -494,21 +503,21 @@ Status as of 2026-08-04:
 
 - Primary Worker: `uta-nihongo-davetchiu`
 - Primary URL: <https://uta-nihongo-davetchiu.d-chiu.workers.dev>
-- Primary Worker version: `785082ff-507f-41e1-b291-60a496f2028c`
+- Primary Worker version: `0f70a113-4c3a-4a62-8c45-02934d4d3328`
 - Retry Worker: `uta-nihongo-mirror-retry`
 - Retry Worker code version: `74cbf77b-e6b0-4e80-b9b4-bfc9e3dae50f`
 - Retry Worker current secret-change version: `0069df36-cf43-4e32-a718-fb027835df5b`
 - Retry schedule: `*/5 * * * *`
 - OpenAI mirror: <https://uta-nihongo-davetchiu.davechiu.chatgpt.site>
-- OpenAI Sites version: 37; environment revision: 4
-- Deployed source commit: `a596711` (`main`, pushed to GitHub and Sites source)
+- OpenAI Sites version: 38; environment revision: 4
+- Deployed source commit: `d3792df` (`main`, pushed to GitHub and Sites source)
 - D1: `uta-nihongo-davetchiu-db`
 - D1 ID: `133398ee-df1d-4a55-a7ea-1f88e418f83e`
 - D1 location: APAC; logical binding remains `DB`.
 - Migrations `0000`, `0001` and `0002` were applied successfully.
 - Cloudflare D1 has 23 songs / 23 unique slugs; outbox was 0 after the final
   end-to-end validation.
-- Runtime source on both hosts is `a596711`; the following Git HEAD is a
+- Runtime source on both hosts is `d3792df`; the following Git HEAD is a
   documentation-only handover update and was intentionally not redeployed.
 
 Both sites keep the existing password gate. `SITE_PASSWORD` and
