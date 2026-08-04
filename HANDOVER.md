@@ -8,22 +8,22 @@
 - Primary full-function site: <https://uta-nihongo-davetchiu.d-chiu.workers.dev>
 - OpenAI read-only mirror: <https://uta-nihongo-davetchiu.davechiu.chatgpt.site>
 - Git branch: `main`
-- Cloudflare deployed source HEAD: `ff27abd`
+- Cloudflare deployed source HEAD: `6397f95`
 - OpenAI Sites project ID: `appgprj_6a6c04056b208191bd5167021ce39a3e`
-- Latest deployed Sites version: 39
+- Latest deployed Sites version: 40
 - Hosted environment revision: 4
 - Storage: D1 binding `DB`; no R2 binding
 - Access: public Sites URL，另有 app-owned password gate
 
 現時 Git `origin` 是上方 GitHub repository。Cloudflare Worker 和 OpenAI
-Sites version 39 都使用 commit `ff27abd`。Cloudflare 是唯一正常寫入來源；
+Sites version 40 都使用 commit `6397f95`。Cloudflare 是唯一正常寫入來源；
 OpenAI Sites 以 `MIRROR_READ_ONLY=1` 運行，會隱藏匯入／管理入口並拒絕
 POST、PATCH、DELETE，但相關程式碼沒有刪除。兩個 D1 仍是獨立 database，
 由已簽署的單向同步保持內容一致。
 
 Runtime 發佈完成後另有一個只更新本文件的 Git commit；依 documentation-only
 規則沒有為該 commit 重複 deploy。兩個站的 runtime source 仍完全相同，都是
-已完整驗證的 `ff27abd`。
+已完整驗證的 `6397f95`。
 
 ## 2. Important security note
 
@@ -90,6 +90,7 @@ Production password 是 Sites runtime secret，不在 repository 內。
 - 歌曲目錄不再按匯入／更新日期排列，改為按歌名讀音的日文 50 音順序。
 - `Song.titleReading` 是純排序 metadata，不應在歌曲目錄或課文標題顯示。
 - AI 課文格式最後一行現規定為 `歌名讀音：完整平假名讀音`；網站 parser 會自動讀取，不再要求使用者在匯入表單另填假名。
+- Parser 會把 Markdown 最後一個非空白行的 `歌名讀音：……` 分離為 sorting metadata；課文頁（包括未能結構化解析而顯示原文的課文）不會顯示該行。
 - Markdown AI 課文範本 `聽歌學日文_AI課文格式範本.md` 是網站 repository 以外的使用者文件；本次已同步更新，但日後修改 parser 時亦要另行確認範本保持一致。
 - 舊課文沒有 `歌名讀音` 仍可匯入。現有課文以已知讀音 fallback、歌名內嵌 ruby 或原歌名作排序 fallback。
 - 排序前會把片假名正規化成平假名，並使用日文 collator。
@@ -242,7 +243,7 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 | `app/globals.css` | Player layout、fixed control bar、floating resume button、safe-area/mobile styles、內容 bottom spacing、sticky mobile lesson menu、offline UI styles及 Aimyon photo background。 |
 | `app/login-client.tsx` | 登入成功後清除 cached login/navigation documents，然後 reload。 |
 | `public/sw.js` | Offline cache、network-first navigation、cache version bump、API exclusions、refresh bypass 和 fallback page。 |
-| `tests/import-parser.test.ts` | Parser、歌名讀音、50 音排序、純歌名、ruby、offline、PWA、homepage artwork、login fallback、logout removal、YouTube resume、fixed controls 及 active playback state assertions；目前共 25 tests。 |
+| `tests/import-parser.test.ts` | Parser、歌名讀音、50 音排序、純歌名、ruby、offline、PWA、homepage artwork、login fallback、logout removal、YouTube resume、fixed controls 及 active playback state assertions；目前共 27 tests。 |
 | `public/aimyon-poster-background.webp` | 首頁海報的 Aimyon 淡色背景相片，1200×900、約 49 KB；文字和圖形不在此 bitmap 內。 |
 | `app/api/auth/[action]/route.ts` | JSON login、無 JavaScript native-form fallback、no-store response；不再提供 logout。 |
 | `app/import-parser.ts` | Flexible lesson parsing、自動 ruby、inflection handling；讀取課文最後的 `歌名讀音：`。 |
@@ -303,6 +304,7 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 | `a596711` | Use default Node compatibility mode |
 | `d3792df` | Reflect YouTube playback state in controls |
 | `ff27abd` | Add Markdown lesson editing |
+| `6397f95` | Hide title readings from lesson content |
 
 ## 7. Validation already performed
 
@@ -400,6 +402,12 @@ For the latest production source:
   Mirror 直接開管理頁會返回首頁、mutation API 回應 403；Cloudflare
   `/api/auth/status` 回應 configured true。Cloudflare remote D1 有 23 首歌／23 個
   unique slug，`mirror_outbox` 為 0。
+- Title-reading display fix validation（`6397f95`）：normal／Cloudflare builds、
+  TypeScript、ESLint、service-worker syntax、Wrangler dry-run、`git diff --check`
+  及 27/27 tests 均通過；新增測試確認未結構化 Markdown 課文最後的
+  `歌名讀音：……` 只會保存作排序資料，不會進入課文頁顯示的原文。OpenAI
+  Sites version 40／environment revision 4 和 Cloudflare Worker version
+  `78c2bc4c-dee2-4583-8c4e-4943c03ed468` 均已發佈；Cloudflare remote D1 沒有 pending migrations。
 
 ## 8. Known limitations and trade-offs
 
@@ -522,21 +530,21 @@ Status as of 2026-08-04:
 
 - Primary Worker: `uta-nihongo-davetchiu`
 - Primary URL: <https://uta-nihongo-davetchiu.d-chiu.workers.dev>
-- Primary Worker version: `b252a397-7f82-41a3-a66e-7a753751fc75`
+- Primary Worker version: `78c2bc4c-dee2-4583-8c4e-4943c03ed468`
 - Retry Worker: `uta-nihongo-mirror-retry`
 - Retry Worker code version: `74cbf77b-e6b0-4e80-b9b4-bfc9e3dae50f`
 - Retry Worker current secret-change version: `0069df36-cf43-4e32-a718-fb027835df5b`
 - Retry schedule: `*/5 * * * *`
 - OpenAI mirror: <https://uta-nihongo-davetchiu.davechiu.chatgpt.site>
-- OpenAI Sites version: 39; environment revision: 4
-- Deployed source commit: `ff27abd` (`main`, pushed to GitHub and Sites source)
+- OpenAI Sites version: 40; environment revision: 4
+- Deployed source commit: `6397f95` (`main`, pushed to GitHub and Sites source)
 - D1: `uta-nihongo-davetchiu-db`
 - D1 ID: `133398ee-df1d-4a55-a7ea-1f88e418f83e`
 - D1 location: APAC; logical binding remains `DB`.
 - Migrations `0000`, `0001` and `0002` were applied successfully.
 - Cloudflare D1 has 23 songs / 23 unique slugs; outbox was 0 after the final
   end-to-end validation.
-- Runtime source on both hosts is `ff27abd`; the following Git HEAD is a
+- Runtime source on both hosts is `6397f95`; the following Git HEAD is a
   documentation-only handover update and was intentionally not redeployed.
 
 Both sites keep the existing password gate. `SITE_PASSWORD` and
