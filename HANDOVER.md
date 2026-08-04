@@ -184,6 +184,11 @@ API 成功後，會無限期等待 Cache Storage 清理完成才 reload；裝置
   被 fixed bar 遮住。
 - 原有 sessionStorage、stable playback verification、4 秒 pause grace、
   autoplay-blocked fallback 及 lifecycle listeners 保持不變。
+- Play／Pause 會持續反映 YouTube IFrame API 的實際 state：`PLAYING` 時 Play
+  button 保持橙色，`PAUSED` 時 Pause button 保持橙色；從 inline iframe 直接操作
+  亦會同步。Buffering 不會清除上一個明確狀態，ended 則清除 highlight。
+- Play／Pause 使用 `aria-pressed` 同步暴露 active state，視覺和輔助技術都能
+  分辨目前狀態。
 
 ## 4. iPhone/YouTube debugging history
 
@@ -228,7 +233,7 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 | `app/globals.css` | Player layout、fixed control bar、floating resume button、safe-area/mobile styles、內容 bottom spacing、sticky mobile lesson menu、offline UI styles及 Aimyon photo background。 |
 | `app/login-client.tsx` | 登入成功後清除 cached login/navigation documents，然後 reload。 |
 | `public/sw.js` | Offline cache、network-first navigation、cache version bump、API exclusions、refresh bypass 和 fallback page。 |
-| `tests/import-parser.test.ts` | Parser、歌名讀音、50 音排序、純歌名、ruby、offline、PWA、homepage artwork、login fallback、logout removal、YouTube resume 及 fixed controls assertions；目前共 25 tests。 |
+| `tests/import-parser.test.ts` | Parser、歌名讀音、50 音排序、純歌名、ruby、offline、PWA、homepage artwork、login fallback、logout removal、YouTube resume、fixed controls 及 active playback state assertions；目前共 25 tests。 |
 | `public/aimyon-poster-background.webp` | 首頁海報的 Aimyon 淡色背景相片，1200×900、約 49 KB；文字和圖形不在此 bitmap 內。 |
 | `app/api/auth/[action]/route.ts` | JSON login、無 JavaScript native-form fallback、no-store response；不再提供 logout。 |
 | `app/import-parser.ts` | Flexible lesson parsing、自動 ruby、inflection handling；讀取課文最後的 `歌名讀音：`。 |

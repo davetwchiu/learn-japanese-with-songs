@@ -758,6 +758,11 @@ rt {
   background: var(--red);
 }
 
+.fixed-player-controls button[aria-pressed="true"] {
+  background: var(--red);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.16);
+}
+
 .fixed-player-controls button:disabled {
   cursor: not-allowed;
   opacity: 0.38;

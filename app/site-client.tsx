@@ -19,6 +19,7 @@ import {
 import {
   PlayerControlBar,
   YouTubePlayer,
+  type PlayerPlaybackState,
   type YouTubePlayerHandle,
 } from "./youtube-player";
 import { useSiteMode } from "./site-mode-client";
@@ -377,6 +378,8 @@ const songSections = [
 export function SongView({ slug }: { slug: string }) {
   const playerControllerRef = useRef<YouTubePlayerHandle>(null);
   const [playerReady, setPlayerReady] = useState(false);
+  const [playerPlaybackState, setPlayerPlaybackState] =
+    useState<PlayerPlaybackState>("idle");
   const { mirrorReadOnly } = useSiteMode();
   const [song, setSong] = useState<Song | null | undefined>(() =>
     bundledSongs.find((item) => item.slug === slug),
@@ -451,6 +454,7 @@ export function SongView({ slug }: { slug: string }) {
               key={song.youtubeId}
               videoId={song.youtubeId}
               title={song.title}
+              onPlaybackStateChange={setPlayerPlaybackState}
               onReadyChange={setPlayerReady}
             />
           ) : (
@@ -649,6 +653,7 @@ export function SongView({ slug }: { slug: string }) {
           <PlayerControlBar
             controllerRef={playerControllerRef}
             disabled={!playerReady}
+            playbackState={playerPlaybackState}
           />
         )}
       </main>

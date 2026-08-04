@@ -706,7 +706,16 @@ test("adds fixed accessible controls for lessons with a ready YouTube player", a
     assert.match(player, new RegExp(`aria-label="${label}"`));
   }
   assert.equal((player.match(/disabled=\{disabled\}/g) ?? []).length, 4);
+  assert.match(player, /onPlaybackStateChange\?\.\("playing"\)/);
+  assert.match(player, /onPlaybackStateChange\?\.\("paused"\)/);
+  assert.match(player, /aria-pressed=\{playbackState === "playing"\}/);
+  assert.match(player, /aria-pressed=\{playbackState === "paused"\}/);
+  assert.match(client, /playbackState=\{playerPlaybackState\}/);
   assert.match(styles, /\.fixed-player-controls\s*\{[\s\S]*?position:\s*fixed;/);
   assert.match(styles, /\.song-page-with-player-controls\s*\{[\s\S]*?padding-bottom:/);
   assert.match(styles, /\.fixed-player-controls\s*\{[\s\S]*?safe-area-inset-bottom/);
+  assert.match(
+    styles,
+    /\.fixed-player-controls button\[aria-pressed="true"\]\s*\{[\s\S]*?background:\s*var\(--red\)/,
+  );
 });

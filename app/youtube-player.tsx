@@ -145,16 +145,22 @@ export interface YouTubePlayerHandle {
   seekBy(seconds: number): void;
 }
 
+export type PlayerPlaybackState = "idle" | "paused" | "playing";
+
 interface YouTubePlayerProps {
   title: string;
   videoId: string;
+  onPlaybackStateChange?(state: PlayerPlaybackState): void;
   onReadyChange?(ready: boolean): void;
 }
 
 export const YouTubePlayer = forwardRef<
   YouTubePlayerHandle,
   YouTubePlayerProps
->(function YouTubePlayer({ title, videoId, onReadyChange }, controllerRef) {
+>(function YouTubePlayer(
+  { title, videoId, onPlaybackStateChange, onReadyChange },
+  controllerRef,
+) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const playerRef = useRef<YouTubePlayerInstance | null>(null);
   const manualResumeRef = useRef<() => void>(() => undefined);
@@ -392,6 +398,7 @@ export const YouTubePlayer = forwardRef<
             onReady(event) {
               playerRef.current = event.target;
               onReadyChange?.(true);
+              onPlaybackStateChange?.("idle");
               const saved = readResumeState(storageKey, videoId);
               if (saved) {
                 resumeIntent.current = true;
@@ -402,6 +409,7 @@ export const YouTubePlayer = forwardRef<
             onStateChange(event) {
               if (!active) return;
               if (event.data === PLAYER_PLAYING) {
+                onPlaybackStateChange?.("playing");
                 clearPauseConfirmation();
                 if (resumeIntent.current || resumeAttempt.current) {
                   verifyResumeSoon();
@@ -409,6 +417,7 @@ export const YouTubePlayer = forwardRef<
                   confirmPlaying();
                 }
               } else if (event.data === PLAYER_ENDED) {
+                onPlaybackStateChange?.("idle");
                 window.clearTimeout(checkTimer);
                 clearPauseConfirmation();
                 lastVisiblePlaying.current = false;
@@ -420,6 +429,7 @@ export const YouTubePlayer = forwardRef<
                 event.data === PLAYER_PAUSED &&
                 document.visibilityState === "visible"
               ) {
+                onPlaybackStateChange?.("paused");
                 if (resumeIntent.current || resumeAttempt.current) {
                   showManualResume();
                 } else {
@@ -430,13 +440,17 @@ export const YouTubePlayer = forwardRef<
               }
             },
             onAutoplayBlocked() {
+              onPlaybackStateChange?.("paused");
               showManualResume();
             },
           },
         });
       })
       .catch(() => {
-        if (active) onReadyChange?.(false);
+        if (active) {
+          onReadyChange?.(false);
+          onPlaybackStateChange?.("idle");
+        }
         // Keep the normal embedded player available if the control API fails.
       });
 
@@ -452,8 +466,9 @@ export const YouTubePlayer = forwardRef<
       manualResumeRef.current = () => undefined;
       playerRef.current = null;
       onReadyChange?.(false);
+      onPlaybackStateChange?.("idle");
     };
-  }, [onReadyChange, playerSrc, videoId]);
+  }, [onPlaybackStateChange, onReadyChange, playerSrc, videoId]);
 
   return (
     <div className="player-stack">
@@ -489,9 +504,11 @@ export const YouTubePlayer = forwardRef<
 export function PlayerControlBar({
   controllerRef,
   disabled,
+  playbackState,
 }: {
   controllerRef: RefObject<YouTubePlayerHandle | null>;
   disabled: boolean;
+  playbackState: PlayerPlaybackState;
 }) {
   return (
     <div
@@ -512,6 +529,7 @@ export function PlayerControlBar({
         onClick={() => controllerRef.current?.play()}
         disabled={disabled}
         aria-label="播放影片"
+        aria-pressed={playbackState === "playing"}
       >
         <span className="fixed-player-play-icon" aria-hidden="true" />
       </button>
@@ -520,6 +538,7 @@ export function PlayerControlBar({
         onClick={() => controllerRef.current?.pause()}
         disabled={disabled}
         aria-label="暫停影片"
+        aria-pressed={playbackState === "paused"}
       >
         <span className="fixed-player-pause-icon" aria-hidden="true" />
       </button>
