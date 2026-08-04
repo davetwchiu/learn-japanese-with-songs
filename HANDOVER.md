@@ -239,7 +239,7 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 | `drizzle/meta/0001_snapshot.json` | Migration snapshot。 |
 | `drizzle/meta/_journal.json` | Migration journal update。 |
 | `.openai/hosting.json` | Sites project ID、D1 logical binding、no R2。 |
-| `wrangler.jsonc` | Cloudflare Worker、assets、APAC D1、compatibility flags 和 observability 設定。 |
+| `wrangler.jsonc` | Cloudflare Worker、assets、APAC D1、compatibility date 和 observability 設定；平台已預設 Node.js compatibility，不再顯式加入 `nodejs_compat`。 |
 | `wrangler.mirror.jsonc` | 每 5 分鐘運行的 mirror retry Worker、共享 D1 和 receiver URL。 |
 | `worker-configuration.d.ts` | Wrangler 依目前 compatibility date／bindings 產生的 Cloudflare runtime types。 |
 | `worker/mirror-retry.ts` | 自動及受保護的手動 outbox retry。 |

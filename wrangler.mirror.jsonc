@@ -3,10 +3,7 @@
   "name": "uta-nihongo-mirror-retry",
   "account_id": "32b5e6213614abf2b305d2a3fce8db09",
   "main": "worker/mirror-retry.ts",
-  "compatibility_date": "2026-08-03",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_date": "2026-08-04",
   "d1_databases": [
     {
       "binding": "DB",

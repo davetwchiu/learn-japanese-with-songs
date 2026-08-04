@@ -2,10 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "uta-nihongo-davetchiu",
   "account_id": "32b5e6213614abf2b305d2a3fce8db09",
-  "compatibility_date": "2026-08-03",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_date": "2026-08-04",
   "main": "vinext/server/app-router-entry",
   "assets": {
     "directory": "dist/client",
