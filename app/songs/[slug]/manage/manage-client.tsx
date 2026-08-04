@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { lessonMarkdown } from "../../../import-parser";
 import { SiteFooter, SiteHeader } from "../../../site-client";
 import type { Song } from "../../../song-data";
 
 export function ManageLessonView({ slug }: { slug: string }) {
   const [song, setSong] = useState<Song | null>();
   const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [markdown, setMarkdown] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "deleting">("idle");
   const [message, setMessage] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -22,6 +24,7 @@ export function ManageLessonView({ slug }: { slug: string }) {
           throw new Error(result.error ?? "找不到課文。");
         }
         setSong(result.song);
+        setMarkdown(lessonMarkdown(result.song));
         setYoutubeUrl(
           result.song.youtubeId
             ? `https://youtu.be/${result.song.youtubeId}`
@@ -62,6 +65,30 @@ export function ManageLessonView({ slug }: { slug: string }) {
     }
   }
 
+  async function saveLesson(event: FormEvent) {
+    event.preventDefault();
+    setStatus("saving");
+    setMessage("");
+    try {
+      const response = await fetch(`/api/songs/${encodeURIComponent(slug)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markdown }),
+      });
+      const result = (await response.json()) as { error?: string; song?: Song };
+      if (!response.ok || !result.song) {
+        throw new Error(result.error ?? "未能儲存課文。");
+      }
+      setSong(result.song);
+      setMarkdown(lessonMarkdown(result.song));
+      setMessage("課文變更已儲存。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "未能儲存課文。");
+    } finally {
+      setStatus("idle");
+    }
+  }
+
   async function deleteLesson() {
     setStatus("deleting");
     setMessage("");
@@ -96,6 +123,27 @@ export function ManageLessonView({ slug }: { slug: string }) {
 
         {song && (
           <div className="manage-grid">
+            <section className="manage-panel lesson-editor-panel">
+              <span className="eyebrow">EDIT LESSON</span>
+              <h2>修正課文</h2>
+              <p>以下顯示原來課文的 Markdown。修改後會重新整理課文內容。</p>
+              <form onSubmit={saveLesson}>
+                <label>
+                  <span>課文 Markdown</span>
+                  <textarea
+                    value={markdown}
+                    onChange={(event) => setMarkdown(event.target.value)}
+                    spellCheck={false}
+                    rows={24}
+                    required
+                  />
+                </label>
+                <button className="primary-button" type="submit" disabled={status !== "idle"}>
+                  {status === "saving" ? "儲存中⋯⋯" : "儲存變更"}
+                </button>
+              </form>
+            </section>
+
             <section className="manage-panel">
               <span className="eyebrow">YOUTUBE PLAYER</span>
               <h2>後補或更換影片</h2>

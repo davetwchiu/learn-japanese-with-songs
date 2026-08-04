@@ -56,6 +56,7 @@ export async function POST(request: Request) {
     }
     const song = {
       ...importedSong,
+      sourceMarkdown: content.trim(),
       ...(videoId ? { youtubeId: videoId } : {}),
     };
     await saveStoredSong(song);

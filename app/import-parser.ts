@@ -760,6 +760,65 @@ export function parseImportedLesson(
   });
 }
 
+export function lessonMarkdown(song: Song): string {
+  if (song.sourceMarkdown) return song.sourceMarkdown;
+
+  const sections = [
+    `# 《${song.title}》日文歌詞學習材料`,
+    `歌：${song.artist}`,
+    song.level !== "未分類" ? `程度：${song.level}` : "",
+    song.tags.length ? `標籤：${song.tags.join("、")}` : "",
+    song.summary ? `簡介：${song.summary}` : "",
+    "## 一、逐句日中對照翻譯",
+    ...song.lyrics.map((line) =>
+      [`**${line.jp}**`, line.zh, line.note].filter(Boolean).join("\n"),
+    ),
+    "## 二、歌曲內容和情境",
+    ...song.context,
+    "## 三、文法重點",
+    ...song.grammar.flatMap((item, index) => [
+      `### ${index + 1}. ${item.pattern}${item.meaning ? `：${item.meaning}` : ""}`,
+      item.source ? `歌詞：\n\n**${item.source}**` : "",
+      item.structure ? `結構：\n\n> ${item.structure}` : "",
+      item.explanation,
+      ...item.examples.flatMap((example) => [
+        "", `**${example.jp}**`, example.zh,
+      ]),
+      "",
+    ]),
+    "## 四、生字及假名讀音",
+    "| 生字 | 詞性／中文意思 | 用法或例句 |",
+    "| --- | --- | --- |",
+    ...song.vocabulary.map(
+      (item) =>
+        `| ${item.term}${item.reading ? `（${item.reading}）` : ""} | ${item.partOfSpeech}${item.meaning ? `；${item.meaning}` : ""} | ${[item.note, item.exampleJp, item.exampleZh].filter(Boolean).join(" ")} |`,
+    ),
+    "## 五、擬聲詞、擬態詞及口語",
+    ...song.spoken.flatMap((item, index) => [
+      `### ${index + 1}. ${item.term}`,
+      [item.kind, item.meaning, item.tone, item.usage].filter(Boolean).join("\n"),
+      "",
+    ]),
+    "## 六、容易誤解的地方",
+    ...song.pitfalls.flatMap((item, index) => [
+      `### ${index + 1}. ${item.phrase}`,
+      item.explanation,
+      "",
+    ]),
+    "## 七、值得背下來的實用句子",
+    ...song.phrases.flatMap((item, index) => [
+      `### ${index + 1}. ${item.jp}`,
+      `**${item.jp}**`,
+      `中文：${item.zh}`,
+      `情境：${item.when}`,
+      "",
+    ]),
+    song.titleReading ? `歌名讀音：${song.titleReading}` : "",
+  ];
+
+  return sections.filter(Boolean).join("\n\n");
+}
+
 function blockedHostname(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
   if (

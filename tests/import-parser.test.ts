@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
+  lessonMarkdown,
   parseImportedLesson,
   parseYoutubeId,
 } from "../app/import-parser";
@@ -214,6 +215,32 @@ test("preserves a plain unstructured text block", () => {
   const song = parseImportedLesson("我的日文課文\n\n今日はいい天気です。");
   assert.equal(song.title, "我的日文課文");
   assert.match(song.rawText ?? "", /今日はいい天気です/);
+});
+
+test("creates editable markdown for lessons saved before source markdown", () => {
+  const markdown = lessonMarkdown({
+    slug: "old-lesson",
+    title: "昔の課文",
+    titleReading: "むかしのかぶん",
+    artist: "テスト歌手",
+    level: "N4",
+    publishedAt: "2026-08-04",
+    youtubeId: null,
+    tags: ["日常"],
+    summary: "舊資料也可修改。",
+    lyrics: [{ jp: "昔を思い出す", zh: "想起往昔。" }],
+    context: ["一段測試背景。"],
+    grammar: [],
+    vocabulary: [],
+    spoken: [],
+    pitfalls: [],
+    phrases: [],
+  });
+  const reparsed = parseImportedLesson(markdown);
+  assert.match(markdown, /## 一、逐句日中對照翻譯/);
+  assert.equal(reparsed.title, "昔の課文");
+  assert.equal(reparsed.lyrics[0].zh, "想起往昔。");
+  assert.equal(reparsed.titleReading, "むかしのかぶん");
 });
 
 test("accepts complete JSON lessons", () => {

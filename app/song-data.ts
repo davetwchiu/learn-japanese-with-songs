@@ -45,6 +45,7 @@ export type Song = {
   }[];
   pitfalls: { phrase: string; explanation: string }[];
   phrases: { jp: string; zh: string; when: string }[];
+  sourceMarkdown?: string;
   rawText?: string;
 };
 
@@ -126,6 +127,9 @@ export function normalizeSong(value: unknown): Song {
     spoken: Array.isArray(song.spoken) ? song.spoken : [],
     pitfalls: Array.isArray(song.pitfalls) ? song.pitfalls : [],
     phrases: Array.isArray(song.phrases) ? song.phrases : [],
+    sourceMarkdown: song.sourceMarkdown
+      ? String(song.sourceMarkdown).trim()
+      : undefined,
     rawText: song.rawText ? String(song.rawText).trim() : undefined,
   };
 }

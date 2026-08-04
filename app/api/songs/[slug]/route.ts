@@ -1,4 +1,4 @@
-import { parseYoutubeId } from "@/app/import-parser";
+import { parseImportedLesson, parseYoutubeId } from "@/app/import-parser";
 import { requestIsAuthenticated } from "@/app/password-auth";
 import {
   deleteStoredSong,
@@ -46,16 +46,42 @@ export async function PATCH(
     if (!song) {
       return Response.json({ error: "找不到可修改的課文。" }, { status: 404 });
     }
-    const payload = (await request.json()) as { youtubeUrl?: string };
-    const youtubeUrl = payload.youtubeUrl?.trim() ?? "";
-    const youtubeId = youtubeUrl ? parseYoutubeId(youtubeUrl) : null;
-    if (youtubeUrl && !youtubeId) {
-      return Response.json(
-        { error: "請輸入有效的 YouTube 網址。" },
-        { status: 400 },
-      );
+    const payload = (await request.json()) as {
+      youtubeUrl?: unknown;
+      markdown?: unknown;
+    };
+    let updated = song;
+    if ("youtubeUrl" in payload) {
+      if (typeof payload.youtubeUrl !== "string") {
+        return Response.json({ error: "影片網址格式不正確。" }, { status: 400 });
+      }
+      const youtubeUrl = payload.youtubeUrl.trim();
+      const youtubeId = youtubeUrl ? parseYoutubeId(youtubeUrl) : null;
+      if (youtubeUrl && !youtubeId) {
+        return Response.json(
+          { error: "請輸入有效的 YouTube 網址。" },
+          { status: 400 },
+        );
+      }
+      updated = { ...updated, youtubeId };
     }
-    const updated = { ...song, youtubeId };
+    if ("markdown" in payload) {
+      if (typeof payload.markdown !== "string") {
+        return Response.json({ error: "課文格式不正確。" }, { status: 400 });
+      }
+      const markdown = payload.markdown.trim();
+      const parsed = parseImportedLesson(markdown);
+      updated = {
+        ...parsed,
+        slug: song.slug,
+        publishedAt: song.publishedAt,
+        youtubeId: updated.youtubeId,
+        sourceMarkdown: markdown,
+      };
+    }
+    if (!("youtubeUrl" in payload) && !("markdown" in payload)) {
+      return Response.json({ error: "沒有可儲存的變更。" }, { status: 400 });
+    }
     await saveStoredSong(updated);
     dispatchMirrorUpdates();
     return Response.json({ song: updated });
