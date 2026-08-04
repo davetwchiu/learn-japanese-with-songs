@@ -688,3 +688,25 @@ test("resumes YouTube playback after returning from another app", async () => {
   );
   assert.match(styles, /safe-area-inset-bottom/);
 });
+
+test("adds fixed accessible controls for lessons with a ready YouTube player", async () => {
+  const [client, player, styles] = await Promise.all([
+    readFile(new URL("../app/site-client.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/youtube-player.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(client, /song\.youtubeId \? " song-page-with-player-controls"/);
+  assert.match(client, /song\.youtubeId \? \([\s\S]*?<YouTubePlayer/);
+  assert.match(player, /pauseVideo\(\): void/);
+  assert.match(player, /playerRef\.current\?\.pauseVideo\(\)/);
+  assert.match(player, /seekTo\(Math\.max\(0, currentTime \+ seconds\), true\)/);
+  assert.match(player, /useImperativeHandle/);
+  assert.match(player, /aria-label="影片播放控制"/);
+  for (const label of ["倒退 5 秒", "播放影片", "暫停影片", "快進 5 秒"]) {
+    assert.match(player, new RegExp(`aria-label="${label}"`));
+  }
+  assert.equal((player.match(/disabled=\{disabled\}/g) ?? []).length, 4);
+  assert.match(styles, /\.fixed-player-controls\s*\{[\s\S]*?position:\s*fixed;/);
+  assert.match(styles, /\.song-page-with-player-controls\s*\{[\s\S]*?padding-bottom:/);
+  assert.match(styles, /\.fixed-player-controls\s*\{[\s\S]*?safe-area-inset-bottom/);
+});

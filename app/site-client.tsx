@@ -13,9 +13,14 @@ import {
   type ReactNode,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
-import { YouTubePlayer } from "./youtube-player";
+import {
+  PlayerControlBar,
+  YouTubePlayer,
+  type YouTubePlayerHandle,
+} from "./youtube-player";
 import { useSiteMode } from "./site-mode-client";
 
 function RubyText({ children }: { children: string }) {
@@ -370,6 +375,8 @@ const songSections = [
 ] as const;
 
 export function SongView({ slug }: { slug: string }) {
+  const playerControllerRef = useRef<YouTubePlayerHandle>(null);
+  const [playerReady, setPlayerReady] = useState(false);
   const { mirrorReadOnly } = useSiteMode();
   const [song, setSong] = useState<Song | null | undefined>(() =>
     bundledSongs.find((item) => item.slug === slug),
@@ -418,7 +425,11 @@ export function SongView({ slug }: { slug: string }) {
   return (
     <>
       <SiteHeader />
-      <main className="song-page">
+      <main
+        className={`song-page${
+          song.youtubeId ? " song-page-with-player-controls" : ""
+        }`}
+      >
         <header className="song-hero">
           <div>
             <span className="eyebrow">
@@ -436,9 +447,11 @@ export function SongView({ slug }: { slug: string }) {
           </div>
           {song.youtubeId ? (
             <YouTubePlayer
+              ref={playerControllerRef}
               key={song.youtubeId}
               videoId={song.youtubeId}
               title={song.title}
+              onReadyChange={setPlayerReady}
             />
           ) : (
             <div className="player-shell">
@@ -632,6 +645,12 @@ export function SongView({ slug }: { slug: string }) {
             </LessonSection>
           </article>
         </div>
+        {song.youtubeId && (
+          <PlayerControlBar
+            controllerRef={playerControllerRef}
+            disabled={!playerReady}
+          />
+        )}
       </main>
       <SiteFooter />
     </>

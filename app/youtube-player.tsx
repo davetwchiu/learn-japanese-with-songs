@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 
 const YOUTUBE_API_URL = "https://www.youtube.com/iframe_api";
 const PLAYER_PLAYING = 1;
@@ -12,6 +19,7 @@ const RESUME_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 interface YouTubePlayerInstance {
   getCurrentTime(): number;
   getPlayerState(): number;
+  pauseVideo(): void;
   playVideo(): void;
   seekTo(seconds: number, allowSeekAhead: boolean): void;
 }
@@ -131,18 +139,59 @@ function readResumeState(key: string, videoId: string): ResumeState | null {
   }
 }
 
-export function YouTubePlayer({
-  title,
-  videoId,
-}: {
+export interface YouTubePlayerHandle {
+  pause(): void;
+  play(): void;
+  seekBy(seconds: number): void;
+}
+
+interface YouTubePlayerProps {
   title: string;
   videoId: string;
-}) {
+  onReadyChange?(ready: boolean): void;
+}
+
+export const YouTubePlayer = forwardRef<
+  YouTubePlayerHandle,
+  YouTubePlayerProps
+>(function YouTubePlayer({ title, videoId, onReadyChange }, controllerRef) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const playerRef = useRef<YouTubePlayerInstance | null>(null);
   const manualResumeRef = useRef<() => void>(() => undefined);
   const [resumePrompt, setResumePrompt] = useState(false);
   const playerSrc = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?enablejsapi=1&playsinline=1`;
+
+  useImperativeHandle(
+    controllerRef,
+    () => ({
+      play() {
+        try {
+          playerRef.current?.playVideo();
+        } catch {
+          // Ignore transient player teardown while an iOS tab is restoring.
+        }
+      },
+      pause() {
+        try {
+          playerRef.current?.pauseVideo();
+        } catch {
+          // Ignore transient player teardown while an iOS tab is restoring.
+        }
+      },
+      seekBy(seconds: number) {
+        const player = playerRef.current;
+        if (!player) return;
+        try {
+          const currentTime = player.getCurrentTime();
+          if (!Number.isFinite(currentTime)) return;
+          player.seekTo(Math.max(0, currentTime + seconds), true);
+        } catch {
+          // The player may be transiently unavailable after restoring an iOS tab.
+        }
+      },
+    }),
+    [],
+  );
 
   useEffect(() => {
     if (!iframeRef.current) return;
@@ -342,6 +391,7 @@ export function YouTubePlayer({
           events: {
             onReady(event) {
               playerRef.current = event.target;
+              onReadyChange?.(true);
               const saved = readResumeState(storageKey, videoId);
               if (saved) {
                 resumeIntent.current = true;
@@ -386,6 +436,7 @@ export function YouTubePlayer({
         });
       })
       .catch(() => {
+        if (active) onReadyChange?.(false);
         // Keep the normal embedded player available if the control API fails.
       });
 
@@ -400,8 +451,9 @@ export function YouTubePlayer({
       window.removeEventListener("pageshow", onPageShow);
       manualResumeRef.current = () => undefined;
       playerRef.current = null;
+      onReadyChange?.(false);
     };
-  }, [playerSrc, videoId]);
+  }, [onReadyChange, playerSrc, videoId]);
 
   return (
     <div className="player-stack">
@@ -429,6 +481,55 @@ export function YouTubePlayer({
         onClick={() => manualResumeRef.current()}
       >
         <span className="floating-player-resume-icon" aria-hidden="true" />
+      </button>
+    </div>
+  );
+});
+
+export function PlayerControlBar({
+  controllerRef,
+  disabled,
+}: {
+  controllerRef: RefObject<YouTubePlayerHandle | null>;
+  disabled: boolean;
+}) {
+  return (
+    <div
+      className="fixed-player-controls"
+      role="toolbar"
+      aria-label="影片播放控制"
+    >
+      <button
+        type="button"
+        onClick={() => controllerRef.current?.seekBy(-5)}
+        disabled={disabled}
+        aria-label="倒退 5 秒"
+      >
+        <span aria-hidden="true">−5</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => controllerRef.current?.play()}
+        disabled={disabled}
+        aria-label="播放影片"
+      >
+        <span className="fixed-player-play-icon" aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        onClick={() => controllerRef.current?.pause()}
+        disabled={disabled}
+        aria-label="暫停影片"
+      >
+        <span className="fixed-player-pause-icon" aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        onClick={() => controllerRef.current?.seekBy(5)}
+        disabled={disabled}
+        aria-label="快進 5 秒"
+      >
+        <span aria-hidden="true">+5</span>
       </button>
     </div>
   );

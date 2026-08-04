@@ -1,6 +1,6 @@
 # 聽歌學日文 — Handover Notes
 
-最後更新：2026-08-03（Asia/Hong_Kong）
+最後更新：2026-08-04（Asia/Hong_Kong）
 
 ## 1. Current snapshot
 
@@ -165,6 +165,22 @@ API 成功後，會無限期等待 Cache Storage 清理完成才 reload；裝置
 - Tablet offset 是 82px，iPhone breakpoint 是 72px；章節 anchor 亦預留兩條
   導覽列的高度，避免點擊後標題被遮住。
 
+### 3.10 Fixed lesson player controls
+
+- 有 YouTube 影片的課文頁底部新增 fixed control bar，頁面捲動時仍保持可用；
+  沒有影片的課文不會 render control bar。
+- Control bar 有播放、暫停、倒退 5 秒及快進 5 秒。所有操作都經既有
+  YouTube IFrame API player instance，沒有直接找 iframe 或操作 iframe DOM。
+- `YouTubePlayer` 以 imperative handle 對外提供 `play()`、`pause()` 和
+  `seekBy()`；獨立 `PlayerControlBar` 使用同一 handle，沒有建立第二個 player。
+- IFrame API `onReady` 前四個按鈕全部 disabled；按鈕有中文 `aria-label`，
+  control bar 有 toolbar label，touch target 是 46px。
+- Control bar 和原有 iPhone resume 浮動鍵都使用 safe-area inset。浮動鍵已上移，
+  不會蓋住 control bar；有播放器的課文亦增加 bottom padding，避免最後一段內容
+  被 fixed bar 遮住。
+- 原有 sessionStorage、stable playback verification、4 秒 pause grace、
+  autoplay-blocked fallback 及 lifecycle listeners 保持不變。
+
 ## 4. iPhone/YouTube debugging history
 
 ### Iteration 1 — automatic return resume
@@ -203,12 +219,12 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 
 | File | Main responsibility / changes |
 | --- | --- |
-| `app/youtube-player.tsx` | 新增 YouTube IFrame API wrapper、lifecycle state、resume storage、auto-resume、stable verification、4-second pause grace、floating-button state 和 runtime guards。 |
-| `app/site-client.tsx` | 課堂頁改用 `YouTubePlayer`；包含 offline registration、lesson asset caching、manual refresh flow；目錄和課文標題只用 `plainSongTitle()` 顯示純歌名；首頁海報保留原生元素並加入 Aimyon 背景層。 |
-| `app/globals.css` | Player layout、fixed floating resume button、triangle icon、safe-area/mobile styles、sticky mobile lesson menu 及其獨立橫向捲動、offline UI styles，以及 Aimyon photo wash/background stacking。 |
+| `app/youtube-player.tsx` | YouTube IFrame API wrapper、lifecycle/resume state、imperative control handle、fixed control bar、4-second pause grace、floating-button state 和 runtime guards。 |
+| `app/site-client.tsx` | 課堂頁共用 `YouTubePlayer` handle 及按影片條件 render `PlayerControlBar`；亦包含 offline registration、lesson asset caching、manual refresh flow、純歌名和首頁海報。 |
+| `app/globals.css` | Player layout、fixed control bar、floating resume button、safe-area/mobile styles、內容 bottom spacing、sticky mobile lesson menu、offline UI styles及 Aimyon photo background。 |
 | `app/login-client.tsx` | 登入成功後清除 cached login/navigation documents，然後 reload。 |
 | `public/sw.js` | Offline cache、network-first navigation、cache version bump、API exclusions、refresh bypass 和 fallback page。 |
-| `tests/import-parser.test.ts` | Parser、歌名讀音、50 音排序、純歌名、ruby、offline、PWA、homepage artwork、login fallback、logout removal 和 YouTube-resume assertions；目前共 24 tests。 |
+| `tests/import-parser.test.ts` | Parser、歌名讀音、50 音排序、純歌名、ruby、offline、PWA、homepage artwork、login fallback、logout removal、YouTube resume 及 fixed controls assertions；目前共 25 tests。 |
 | `public/aimyon-poster-background.webp` | 首頁海報的 Aimyon 淡色背景相片，1200×900、約 49 KB；文字和圖形不在此 bitmap 內。 |
 | `app/api/auth/[action]/route.ts` | JSON login、無 JavaScript native-form fallback、no-store response；不再提供 logout。 |
 | `app/import-parser.ts` | Flexible lesson parsing、自動 ruby、inflection handling；讀取課文最後的 `歌名讀音：`。 |
@@ -328,6 +344,11 @@ For the latest production source:
   environment revision 4 並保持 `MIRROR_READ_ONLY=1`，Cloudflare version 為
   `83c28c79-a7dc-47ce-9555-2338d03d2c0d`。Cloudflare D1 仍有 23 首歌／23 個
   unique slug，`mirror_outbox` 為 0。
+- Fixed player controls validation：normal／Cloudflare builds、TypeScript、
+  ESLint、25/25 tests、兩個 Wrangler dry-run、service-worker syntax 及
+  `git diff --check` 均通過。Control bar tests 覆蓋共用 imperative handle、
+  play／pause／±5 秒、ready 前 disabled、accessibility labels、無影片時不 render、
+  fixed positioning、safe-area inset 及課文 bottom spacing。
 
 ## 8. Known limitations and trade-offs
 
