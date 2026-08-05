@@ -1,6 +1,6 @@
 # 聽歌學日文 — Handover Notes
 
-最後更新：2026-08-04（Asia/Hong_Kong）
+最後更新：2026-08-05（Asia/Hong_Kong）
 
 ## 1. Current snapshot
 
@@ -8,22 +8,22 @@
 - Primary full-function site: <https://uta-nihongo-davetchiu.d-chiu.workers.dev>
 - OpenAI read-only mirror: <https://uta-nihongo-davetchiu.davechiu.chatgpt.site>
 - Git branch: `main`
-- Cloudflare deployed source HEAD: `6397f95`
+- Cloudflare deployed source HEAD: `cd3b721`
 - OpenAI Sites project ID: `appgprj_6a6c04056b208191bd5167021ce39a3e`
-- Latest deployed Sites version: 40
+- Latest deployed Sites version: 41
 - Hosted environment revision: 4
 - Storage: D1 binding `DB`; no R2 binding
 - Access: public Sites URL，另有 app-owned password gate
 
 現時 Git `origin` 是上方 GitHub repository。Cloudflare Worker 和 OpenAI
-Sites version 40 都使用 commit `6397f95`。Cloudflare 是唯一正常寫入來源；
+Sites version 41 都使用 commit `cd3b721`。Cloudflare 是唯一正常寫入來源；
 OpenAI Sites 以 `MIRROR_READ_ONLY=1` 運行，會隱藏匯入／管理入口並拒絕
 POST、PATCH、DELETE，但相關程式碼沒有刪除。兩個 D1 仍是獨立 database，
 由已簽署的單向同步保持內容一致。
 
 Runtime 發佈完成後另有一個只更新本文件的 Git commit；依 documentation-only
 規則沒有為該 commit 重複 deploy。兩個站的 runtime source 仍完全相同，都是
-已完整驗證的 `6397f95`。
+已完整驗證的 `cd3b721`。
 
 ## 2. Important security note
 
@@ -117,7 +117,7 @@ Production password 是 Sites runtime secret，不在 repository 內。
 
 1. 在 OpenAI Sites environment variables 把 `MIRROR_READ_ONLY` 改為 `0`
    （或移除）。不要移除 `SITE_PASSWORD` 或 D1 binding。
-2. 重新 deploy 最新已儲存的 production version（目前是 version 37），令新
+2. 重新 deploy 最新已儲存的 production version（目前是 version 41），令新
    environment revision 生效。
 3. 確認 `/import` 和課文的「管理課文與影片」連結重新出現；現有相同原始碼
    即恢復匯入、更新和刪除功能，無需改 code。
@@ -167,6 +167,9 @@ API 成功後，會無限期等待 Cache Storage 清理完成才 reload；裝置
 - 橫向捲動移到目錄內的 `nav`，避免 scroll container 影響外層 sticky。
 - Mobile grid 內的 `.lesson-toc` 使用 `min-width: 0`，令目錄 track 不會被按鈕
   的 intrinsic width 撐闊；左右滑動只發生在內層 `nav`，課文保持不動。
+- 為使 iPhone 點擊 anchor 後仍可靠地固定目錄，mobile `.lesson-layout` 改為
+  block flow；`.lesson-toc` 的 sticky containing block 因而涵蓋整篇課文，不會
+  被 CSS grid 的 anchor reflow 帶走。
 - Tablet offset 是 82px，iPhone breakpoint 是 72px；章節 anchor 亦預留兩條
   導覽列的高度，避免點擊後標題被遮住。
 
@@ -240,7 +243,7 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 | --- | --- |
 | `app/youtube-player.tsx` | YouTube IFrame API wrapper、lifecycle/resume state、imperative control handle、fixed control bar、4-second pause grace、floating-button state 和 runtime guards。 |
 | `app/site-client.tsx` | 課堂頁共用 `YouTubePlayer` handle 及按影片條件 render `PlayerControlBar`；亦包含 offline registration、lesson asset caching、manual refresh flow、純歌名和首頁海報。 |
-| `app/globals.css` | Player layout、fixed control bar、floating resume button、safe-area/mobile styles、內容 bottom spacing、sticky mobile lesson menu、offline UI styles及 Aimyon photo background。 |
+| `app/globals.css` | Player layout、fixed control bar、floating resume button、safe-area/mobile styles、內容 bottom spacing、sticky mobile lesson menu（含 anchor-safe block flow）、offline UI styles及 Aimyon photo background。 |
 | `app/login-client.tsx` | 登入成功後清除 cached login/navigation documents，然後 reload。 |
 | `public/sw.js` | Offline cache、network-first navigation、cache version bump、API exclusions、refresh bypass 和 fallback page。 |
 | `tests/import-parser.test.ts` | Parser、歌名讀音、50 音排序、純歌名、ruby、offline、PWA、homepage artwork、login fallback、logout removal、YouTube resume、fixed controls 及 active playback state assertions；目前共 27 tests。 |
@@ -305,6 +308,7 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 | `d3792df` | Reflect YouTube playback state in controls |
 | `ff27abd` | Add Markdown lesson editing |
 | `6397f95` | Hide title readings from lesson content |
+| `cd3b721` | Stabilize mobile lesson menu anchors |
 
 ## 7. Validation already performed
 
@@ -408,6 +412,14 @@ For the latest production source:
   `歌名讀音：……` 只會保存作排序資料，不會進入課文頁顯示的原文。OpenAI
   Sites version 40／environment revision 4 和 Cloudflare Worker version
   `78c2bc4c-dee2-4583-8c4e-4943c03ed468` 均已發佈；Cloudflare remote D1 沒有 pending migrations。
+- Mobile lesson anchor validation（`cd3b721`）：normal／Cloudflare builds、
+  TypeScript、ESLint、service-worker syntax、Wrangler dry-run、`git diff --check`
+  及 27/27 tests 均通過。mobile CSS 把 lesson layout 改為 block flow，目錄使用
+  sticky containing block 覆蓋整篇課文；兩個 production URL 均回應 200，實際
+  CSS 均包含該結構。OpenAI Sites version 41／environment revision 4 保持
+  `MIRROR_READ_ONLY=1`；Cloudflare Worker version 為
+  `c05c72d7-cbb2-4bd3-8ed3-b189a74398f1`。Cloudflare D1 有 24 首歌／24 個
+  unique slug，`mirror_outbox` 為 0。
 
 ## 8. Known limitations and trade-offs
 
@@ -530,21 +542,21 @@ Status as of 2026-08-04:
 
 - Primary Worker: `uta-nihongo-davetchiu`
 - Primary URL: <https://uta-nihongo-davetchiu.d-chiu.workers.dev>
-- Primary Worker version: `78c2bc4c-dee2-4583-8c4e-4943c03ed468`
+- Primary Worker version: `c05c72d7-cbb2-4bd3-8ed3-b189a74398f1`
 - Retry Worker: `uta-nihongo-mirror-retry`
 - Retry Worker code version: `74cbf77b-e6b0-4e80-b9b4-bfc9e3dae50f`
 - Retry Worker current secret-change version: `0069df36-cf43-4e32-a718-fb027835df5b`
 - Retry schedule: `*/5 * * * *`
 - OpenAI mirror: <https://uta-nihongo-davetchiu.davechiu.chatgpt.site>
-- OpenAI Sites version: 40; environment revision: 4
-- Deployed source commit: `6397f95` (`main`, pushed to GitHub and Sites source)
+- OpenAI Sites version: 41; environment revision: 4
+- Deployed source commit: `cd3b721` (`main`, pushed to GitHub and Sites source)
 - D1: `uta-nihongo-davetchiu-db`
 - D1 ID: `133398ee-df1d-4a55-a7ea-1f88e418f83e`
 - D1 location: APAC; logical binding remains `DB`.
 - Migrations `0000`, `0001` and `0002` were applied successfully.
-- Cloudflare D1 has 23 songs / 23 unique slugs; outbox was 0 after the final
+- Cloudflare D1 has 24 songs / 24 unique slugs; outbox was 0 after the final
   end-to-end validation.
-- Runtime source on both hosts is `6397f95`; the following Git HEAD is a
+- Runtime source on both hosts is `cd3b721`; the following Git HEAD is a
   documentation-only handover update and was intentionally not redeployed.
 
 Both sites keep the existing password gate. `SITE_PASSWORD` and
