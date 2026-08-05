@@ -1811,12 +1811,17 @@ rt {
   }
 
   .lesson-layout {
+    display: block;
     grid-template-columns: 1fr;
   }
 
   .lesson-toc {
+    align-self: auto;
     background: var(--paper);
+    height: max-content;
+    margin-bottom: clamp(36px, 7vw, 100px);
     min-width: 0;
+    position: -webkit-sticky;
     position: sticky;
     top: 82px;
     z-index: 10;

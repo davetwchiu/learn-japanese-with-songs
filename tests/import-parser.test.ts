@@ -754,6 +754,14 @@ test("adds fixed accessible controls for lessons with a ready YouTube player", a
   assert.match(styles, /\.fixed-player-controls\s*\{[\s\S]*?safe-area-inset-bottom/);
   assert.match(
     styles,
+    /@media \(max-width: 980px\)\s*\{[\s\S]*?\.lesson-layout\s*\{[\s\S]*?display:\s*block;/,
+  );
+  assert.match(
+    styles,
+    /@media \(max-width: 980px\)\s*\{[\s\S]*?\.lesson-toc\s*\{[\s\S]*?position:\s*-webkit-sticky;[\s\S]*?position:\s*sticky;/,
+  );
+  assert.match(
+    styles,
     /\.fixed-player-controls button\[aria-pressed="true"\]\s*\{[\s\S]*?background:\s*var\(--red\)/,
   );
 });
