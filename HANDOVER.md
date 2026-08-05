@@ -538,7 +538,7 @@ Sites source credentials are short-lived. Obtain a fresh credential when require
 
 ## 12. Current dual-hosting deployment
 
-Status as of 2026-08-04:
+Status as of 2026-08-05:
 
 - Primary Worker: `uta-nihongo-davetchiu`
 - Primary URL: <https://uta-nihongo-davetchiu.d-chiu.workers.dev>
