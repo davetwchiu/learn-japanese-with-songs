@@ -8,22 +8,22 @@
 - Primary full-function site: <https://uta-nihongo-davetchiu.d-chiu.workers.dev>
 - OpenAI read-only mirror: <https://uta-nihongo-davetchiu.davechiu.chatgpt.site>
 - Git branch: `main`
-- Cloudflare deployed source HEAD: `d50b9fd`
+- Cloudflare deployed source HEAD: `307f922`
 - OpenAI Sites project ID: `appgprj_6a6c04056b208191bd5167021ce39a3e`
-- Latest deployed Sites version: 44
+- Latest deployed Sites version: 45
 - Hosted environment revision: 4
 - Storage: D1 binding `DB`; no R2 binding
 - Access: public Sites URL，另有 app-owned password gate
 
 現時 Git `origin` 是上方 GitHub repository。Cloudflare Worker 和 OpenAI
-Sites version 44 都使用 commit `d50b9fd`。Cloudflare 是唯一正常寫入來源；
+Sites version 45 都使用 commit `307f922`。Cloudflare 是唯一正常寫入來源；
 OpenAI Sites 以 `MIRROR_READ_ONLY=1` 運行，會隱藏匯入／管理入口並拒絕
 POST、PATCH、DELETE，但相關程式碼沒有刪除。兩個 D1 仍是獨立 database，
 由已簽署的單向同步保持內容一致。
 
 Runtime 發佈完成後另有一個只更新本文件的 Git commit；依 documentation-only
 規則沒有為該 commit 重複 deploy。兩個站的 runtime source 仍完全相同，都是
-已完整驗證的 `d50b9fd`。
+已完整驗證的 `307f922`。
 
 ## 2. Important security note
 
@@ -209,6 +209,7 @@ API 成功後，會無限期等待 Cache Storage 清理完成才 reload；裝置
 - 可出題上限是所選歌曲的**不重複**生字題目數乘二：每個生字最多問一次讀音和一次意思；同一輪抽題不會重複。
 - 每題為隨機選擇題，答題後立即顯示正確答案，約 1.1 秒後自動前往下一題；任何題目下方都可隨時返回主頁。
 - 讀音題只顯示詞語內的漢字，隱藏所有假名及 ruby，以免洩露答案；意思題會以 ruby 顯示詞語讀音。
+- 答對後約 1.1 秒會自動前往下一題；答錯後會保留正確答案，並由用家按「下一題」才繼續，方便溫習。
 - 題目與選項在 client side 依目前歌曲生字資料生成，不需要新增 D1 schema 或修改歌曲內容。
 - 主導覽、首頁行動連結和 iPhone offline cache 都已加入測驗入口；service worker cache 已升級為 `uta-nihongo-offline-v4`。
 
@@ -325,6 +326,7 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 | `600f617` | Show ruby readings in quiz prompts |
 | `4eec08d` | Hide readings in quiz pronunciation prompts |
 | `d50b9fd` | Hide kana clues in reading quiz |
+| `307f922` | Keep incorrect quiz answers visible |
 
 ## 7. Validation already performed
 
@@ -442,6 +444,12 @@ For the latest production source:
   OpenAI Sites version 44 和 Cloudflare Worker version
   `5934a4d4-2094-4e4e-a120-87de055bcd33` 均已發布，使用同一 runtime source
   `d50b9fd`。
+- Vocabulary quiz answer-review release（`307f922`）：normal／Cloudflare builds、
+  ESLint、service-worker syntax、`git diff --check` 及 27/27 tests 均通過。答錯後
+  正確答案會保持顯示並要求用家自行按「下一題」，答對則繼續自動跳題。OpenAI
+  Sites version 45 和 Cloudflare Worker version
+  `50d32338-ceb8-44a0-978b-649db646833c` 均已發布，使用同一 runtime source
+  `307f922`。
 
 ## 8. Known limitations and trade-offs
 
@@ -564,21 +572,21 @@ Status as of 2026-08-08:
 
 - Primary Worker: `uta-nihongo-davetchiu`
 - Primary URL: <https://uta-nihongo-davetchiu.d-chiu.workers.dev>
-- Primary Worker version: `5934a4d4-2094-4e4e-a120-87de055bcd33`
+- Primary Worker version: `50d32338-ceb8-44a0-978b-649db646833c`
 - Retry Worker: `uta-nihongo-mirror-retry`
 - Retry Worker code version: `74cbf77b-e6b0-4e80-b9b4-bfc9e3dae50f`
 - Retry Worker current secret-change version: `0069df36-cf43-4e32-a718-fb027835df5b`
 - Retry schedule: `*/5 * * * *`
 - OpenAI mirror: <https://uta-nihongo-davetchiu.davechiu.chatgpt.site>
-- OpenAI Sites version: 44; environment revision: 4
-- Deployed source commit: `d50b9fd` (`main`, pushed to GitHub and Sites source)
+- OpenAI Sites version: 45; environment revision: 4
+- Deployed source commit: `307f922` (`main`, pushed to GitHub and Sites source)
 - D1: `uta-nihongo-davetchiu-db`
 - D1 ID: `133398ee-df1d-4a55-a7ea-1f88e418f83e`
 - D1 location: APAC; logical binding remains `DB`.
 - Migrations `0000`, `0001` and `0002` were applied successfully.
 - Cloudflare D1 has 24 songs / 24 unique slugs; outbox was 0 after the final
   end-to-end validation.
-- Runtime source on both hosts is `d50b9fd`; the following Git HEAD is a
+- Runtime source on both hosts is `307f922`; the following Git HEAD is a
   documentation-only handover update and was intentionally not redeployed.
 
 Both sites keep the existing password gate. `SITE_PASSWORD` and
