@@ -274,10 +274,14 @@ export function QuizView() {
               <span className="eyebrow">{activeQuestion.kind === "reading" ? "讀音" : "意思"}</span>
               <h1 id="quiz-question-title">
                 「
-                <ruby lang="ja">
-                  {activeQuestion.term}
-                  <rt>{activeQuestion.reading}</rt>
-                </ruby>
+                {activeQuestion.kind === "reading" ? (
+                  <span lang="ja">{activeQuestion.term}</span>
+                ) : (
+                  <ruby lang="ja">
+                    {activeQuestion.term}
+                    <rt>{activeQuestion.reading}</rt>
+                  </ruby>
+                )}
                 」的
                 {activeQuestion.kind === "reading" ? "讀音" : "意思"}是？
               </h1>
