@@ -159,6 +159,7 @@ export function SiteHeader() {
           "/",
           "/grammar",
           "/vocabulary",
+          "/quiz",
           "/api/songs",
           "/apple-touch-icon.png",
           "/icon-512.png",
@@ -196,6 +197,7 @@ export function SiteHeader() {
         <a href="/#songs">歌曲目錄</a>
         <a href="/grammar">文法索引</a>
         <a href="/vocabulary">生字索引</a>
+        <a href="/quiz">生字測驗</a>
         {!mirrorReadOnly && <a href="/import">匯入課文</a>}
         <button
           className="offline-update"
@@ -284,6 +286,9 @@ export function HomeView() {
               </a>
               <a className="text-link" href="/grammar">
                 瀏覽文法索引 →
+              </a>
+              <a className="text-link" href="/quiz">
+                挑戰生字測驗 →
               </a>
             </div>
           </div>

@@ -1,9 +1,10 @@
 const CACHE_PREFIX = "uta-nihongo-offline-";
-const CACHE_NAME = `${CACHE_PREFIX}v3`;
+const CACHE_NAME = `${CACHE_PREFIX}v4`;
 const CORE_URLS = [
   "/",
   "/grammar",
   "/vocabulary",
+  "/quiz",
   "/aimyon-poster-background.webp",
   "/apple-touch-icon.png",
   "/icon-512.png",

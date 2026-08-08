@@ -612,7 +612,7 @@ test("includes offline learning support and a manual update control", async () =
     readFile(new URL("../public/site.webmanifest", import.meta.url), "utf8"),
   ]);
   assert.match(worker, /CACHE_URLS/);
-  assert.match(worker, /\$\{CACHE_PREFIX\}v3/);
+  assert.match(worker, /\$\{CACHE_PREFIX\}v4/);
   assert.match(worker, /networkFirstNavigation/);
   assert.match(worker, /request\.mode === "navigate"/);
   assert.match(
@@ -625,6 +625,7 @@ test("includes offline learning support and a manual update control", async () =
   assert.doesNotMatch(worker, /cache\.match\("\/"\)/);
   assert.match(client, /serviceWorker[\s\S]+?\.register\("\/sw\.js"/);
   assert.match(client, /\/api\/songs/);
+  assert.match(client, /\/quiz/);
   assert.match(client, /X-Uta-Refresh/);
   assert.match(client, /optionalUrls:\s*loadedAssets/);
   assert.match(client, /isAppleMobileDevice/);
@@ -632,6 +633,7 @@ test("includes offline learning support and a manual update control", async () =
   assert.match(client, /更新離線學習內容/);
   assert.match(client, /\/aimyon-poster-background\.webp/);
   assert.match(worker, /\/aimyon-poster-background\.webp/);
+  assert.match(worker, /\/quiz/);
   assert.match(login, /resetOfflineShell/);
   assert.match(login, /Promise\.race/);
   assert.match(login, /OFFLINE_RESET_WAIT_MS/);
