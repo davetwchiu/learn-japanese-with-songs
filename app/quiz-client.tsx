@@ -147,8 +147,23 @@ export function QuizView() {
   const activeQuestion = questions[questionIndex];
   const isFinished = questions.length > 0 && questionIndex >= questions.length;
 
+  function nextQuestion() {
+    if (questionIndex + 1 >= questions.length) {
+      setQuestionIndex(questions.length);
+    } else {
+      setQuestionIndex((index) => index + 1);
+      setSelectedAnswer(null);
+    }
+  }
+
   useEffect(() => {
-    if (!selectedAnswer || !activeQuestion) return;
+    if (
+      !selectedAnswer ||
+      !activeQuestion ||
+      selectedAnswer !== activeQuestion.correctAnswer
+    ) {
+      return;
+    }
     const timeout = window.setTimeout(() => {
       if (questionIndex + 1 >= questions.length) {
         setQuestionIndex(questions.length);
@@ -331,18 +346,29 @@ export function QuizView() {
               })}
             </div>
             {selectedAnswer && (
-              <p
-                className={`quiz-feedback${
-                  selectedAnswer === activeQuestion.correctAnswer
-                    ? " is-correct"
-                    : " is-wrong"
-                }`}
-              >
-                {selectedAnswer === activeQuestion.correctAnswer
-                  ? "答對！"
-                  : "未答中。"}
-                正確答案：<strong>{activeQuestion.correctAnswer}</strong>
-              </p>
+              <div className="quiz-answer-review">
+                <p
+                  className={`quiz-feedback${
+                    selectedAnswer === activeQuestion.correctAnswer
+                      ? " is-correct"
+                      : " is-wrong"
+                  }`}
+                >
+                  {selectedAnswer === activeQuestion.correctAnswer
+                    ? "答對！"
+                    : "未答中。"}
+                  正確答案：<strong>{activeQuestion.correctAnswer}</strong>
+                </p>
+                {selectedAnswer !== activeQuestion.correctAnswer && (
+                  <button
+                    className="primary-button quiz-next-button"
+                    type="button"
+                    onClick={nextQuestion}
+                  >
+                    下一題 <span aria-hidden="true">→</span>
+                  </button>
+                )}
+              </div>
             )}
             <Link className="quiz-home-button" href="/">
               返回主頁

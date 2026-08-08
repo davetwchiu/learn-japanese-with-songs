@@ -1618,6 +1618,12 @@ rt {
   margin-left: 5px;
 }
 
+.quiz-next-button {
+  border: 0;
+  cursor: pointer;
+  margin-top: 16px;
+}
+
 .quiz-home-button {
   border-bottom: 2px solid var(--red);
   display: inline-block;
