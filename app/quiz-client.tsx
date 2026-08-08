@@ -16,6 +16,7 @@ type QuizQuestion = {
   id: string;
   kind: QuestionKind;
   term: string;
+  promptTerm: string;
   reading: string;
   songTitle: string;
   correctAnswer: string;
@@ -47,19 +48,34 @@ function choices(correct: string, values: string[]): string[] {
   return shuffle([correct, ...alternatives.slice(0, 3)]);
 }
 
+function kanjiOnlyTerm(term: string): string {
+  const plainTerm = term
+    .replace(/\[([^\]]+)\]\{[^}]+\}/gu, "$1")
+    .replace(
+      /([\p{Script=Han}々〆ヶ]+)[（(][ぁ-ゖァ-ヺー・]+[）)]/gu,
+      "$1",
+    );
+  return (plainTerm.match(/[\p{Script=Han}々〆ヶ]+/gu) ?? []).join("");
+}
+
 function questionKey(kind: QuestionKind, word: Vocabulary): string {
   return [kind, word.term.trim(), word.reading.trim(), word.meaning.trim()].join("\u0000");
 }
 
 function createQuestionPool(selected: VocabularyEntry[], all: VocabularyEntry[]): QuizQuestion[] {
-  const readings = all.map(({ word }) => word.reading);
+  const readings = all
+    .filter(({ word }) => kanjiOnlyTerm(word.term))
+    .map(({ word }) => word.reading);
   const meanings = all.map(({ word }) => word.meaning);
   const seen = new Set<string>();
 
   return selected.flatMap(({ song, word }) =>
     (["reading", "meaning"] as const).flatMap((kind) => {
+      const promptTerm =
+        kind === "reading" ? kanjiOnlyTerm(word.term) : word.term.trim();
       if (
         !word.term.trim() ||
+        !promptTerm ||
         !(kind === "reading" ? word.reading : word.meaning).trim()
       ) {
         return [];
@@ -72,6 +88,7 @@ function createQuestionPool(selected: VocabularyEntry[], all: VocabularyEntry[])
         id,
         kind,
         term: word.term.trim(),
+        promptTerm,
         reading: word.reading.trim(),
         songTitle: plainSongTitle(song.title),
         correctAnswer,
@@ -181,7 +198,7 @@ export function QuizView() {
             <span className="eyebrow">VOCABULARY QUIZ</span>
             <h1 id="quiz-title">生字測驗</h1>
             <p>
-              選擇想溫習的歌曲和題數，系統會隨機出讀音或意思題；同一輪不會重複出題。
+              選擇想溫習的歌曲和題數，系統會隨機出讀音或意思題；讀音題只顯示漢字，避免假名提示答案。
             </p>
 
             <fieldset className="quiz-song-picker">
@@ -275,7 +292,7 @@ export function QuizView() {
               <h1 id="quiz-question-title">
                 「
                 {activeQuestion.kind === "reading" ? (
-                  <span lang="ja">{activeQuestion.term}</span>
+                  <span lang="ja">{activeQuestion.promptTerm}</span>
                 ) : (
                   <ruby lang="ja">
                     {activeQuestion.term}
