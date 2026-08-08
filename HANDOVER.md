@@ -1,6 +1,6 @@
 # 聽歌學日文 — Handover Notes
 
-最後更新：2026-08-05（Asia/Hong_Kong）
+最後更新：2026-08-08（Asia/Hong_Kong）
 
 ## 1. Current snapshot
 
@@ -8,22 +8,22 @@
 - Primary full-function site: <https://uta-nihongo-davetchiu.d-chiu.workers.dev>
 - OpenAI read-only mirror: <https://uta-nihongo-davetchiu.davechiu.chatgpt.site>
 - Git branch: `main`
-- Cloudflare deployed source HEAD: `cd3b721`
+- Cloudflare deployed source HEAD: `4eec08d`
 - OpenAI Sites project ID: `appgprj_6a6c04056b208191bd5167021ce39a3e`
-- Latest deployed Sites version: 41
+- Latest deployed Sites version: 43
 - Hosted environment revision: 4
 - Storage: D1 binding `DB`; no R2 binding
 - Access: public Sites URL，另有 app-owned password gate
 
 現時 Git `origin` 是上方 GitHub repository。Cloudflare Worker 和 OpenAI
-Sites version 41 都使用 commit `cd3b721`。Cloudflare 是唯一正常寫入來源；
+Sites version 43 都使用 commit `4eec08d`。Cloudflare 是唯一正常寫入來源；
 OpenAI Sites 以 `MIRROR_READ_ONLY=1` 運行，會隱藏匯入／管理入口並拒絕
 POST、PATCH、DELETE，但相關程式碼沒有刪除。兩個 D1 仍是獨立 database，
 由已簽署的單向同步保持內容一致。
 
 Runtime 發佈完成後另有一個只更新本文件的 Git commit；依 documentation-only
 規則沒有為該 commit 重複 deploy。兩個站的 runtime source 仍完全相同，都是
-已完整驗證的 `cd3b721`。
+已完整驗證的 `4eec08d`。
 
 ## 2. Important security note
 
@@ -203,6 +203,15 @@ API 成功後，會無限期等待 Cache Storage 清理完成才 reload；裝置
 - 儲存時會重新解析 Markdown 並更新課文內容，同時保留既有 slug、發布日期及
   YouTube 設定；更新會照既有流程寫入 mirror outbox。
 
+### 3.12 Vocabulary quiz
+
+- 新增 `/quiz` 生字測驗頁，可多選歌曲，再由用家設定題數。
+- 可出題上限是所選歌曲的**不重複**生字題目數乘二：每個生字最多問一次讀音和一次意思；同一輪抽題不會重複。
+- 每題為隨機選擇題，答題後立即顯示正確答案，約 1.1 秒後自動前往下一題；任何題目下方都可隨時返回主頁。
+- 讀音題只顯示詞語本身，絕不顯示 ruby，以免洩露答案；意思題會以 ruby 顯示詞語讀音。
+- 題目與選項在 client side 依目前歌曲生字資料生成，不需要新增 D1 schema 或修改歌曲內容。
+- 主導覽、首頁行動連結和 iPhone offline cache 都已加入測驗入口；service worker cache 已升級為 `uta-nihongo-offline-v4`。
+
 ## 4. iPhone/YouTube debugging history
 
 ### Iteration 1 — automatic return resume
@@ -243,9 +252,11 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 | --- | --- |
 | `app/youtube-player.tsx` | YouTube IFrame API wrapper、lifecycle/resume state、imperative control handle、fixed control bar、4-second pause grace、floating-button state 和 runtime guards。 |
 | `app/site-client.tsx` | 課堂頁共用 `YouTubePlayer` handle 及按影片條件 render `PlayerControlBar`；亦包含 offline registration、lesson asset caching、manual refresh flow、純歌名和首頁海報。 |
+| `app/quiz-client.tsx`、`app/quiz/page.tsx` | 生字測驗設定、隨機不重複題目、讀音／意思選擇題、答案 feedback 和完成結果頁。 |
 | `app/globals.css` | Player layout、fixed control bar、floating resume button、safe-area/mobile styles、內容 bottom spacing、sticky mobile lesson menu（含 anchor-safe block flow）、offline UI styles及 Aimyon photo background。 |
 | `app/login-client.tsx` | 登入成功後清除 cached login/navigation documents，然後 reload。 |
 | `public/sw.js` | Offline cache、network-first navigation、cache version bump、API exclusions、refresh bypass 和 fallback page。 |
+| `public/og.png` | 更新為配合生字測驗的社交分享圖。 |
 | `tests/import-parser.test.ts` | Parser、歌名讀音、50 音排序、純歌名、ruby、offline、PWA、homepage artwork、login fallback、logout removal、YouTube resume、fixed controls 及 active playback state assertions；目前共 27 tests。 |
 | `public/aimyon-poster-background.webp` | 首頁海報的 Aimyon 淡色背景相片，1200×900、約 49 KB；文字和圖形不在此 bitmap 內。 |
 | `app/api/auth/[action]/route.ts` | JSON login、無 JavaScript native-form fallback、no-store response；不再提供 logout。 |
@@ -269,6 +280,7 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 | `app/api/internal/mirror/route.ts` | OpenAI Sites signed receiver。 |
 | `app/runtime-mode.ts`、`app/site-mode-client.tsx` | 唯讀 runtime 開關及 UI mode。 |
 | `drizzle/0002_empty_ultron.sql` | Outbox、receiver version 和 applied-event tables。 |
+| `package.json`、`package-lock.json` | 將 `tsx` 明確列為 dev dependency，令 `npm test` 不再依賴 transitive hoisting。 |
 | `vite.config.ts` | 保留原有 Sites／本機 binding；只有 `CLOUDFLARE_DEPLOY=1` 時使用獨立 Cloudflare config。 |
 
 ## 6. Relevant commits
@@ -309,6 +321,9 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 | `ff27abd` | Add Markdown lesson editing |
 | `6397f95` | Hide title readings from lesson content |
 | `cd3b721` | Stabilize mobile lesson menu anchors |
+| `f2b7267` | Add vocabulary quiz |
+| `600f617` | Show ruby readings in quiz prompts |
+| `4eec08d` | Hide readings in quiz pronunciation prompts |
 
 ## 7. Validation already performed
 
@@ -420,6 +435,12 @@ For the latest production source:
   `MIRROR_READ_ONLY=1`；Cloudflare Worker version 為
   `c05c72d7-cbb2-4bd3-8ed3-b189a74398f1`。Cloudflare D1 有 24 首歌／24 個
   unique slug，`mirror_outbox` 為 0。
+- Vocabulary quiz release（`4eec08d`）：normal／Cloudflare builds、ESLint、
+  service-worker syntax、`git diff --check` 及 27/27 tests 均通過。測驗可選歌曲、
+  限制不重複題數、即時答案和自動下一題；讀音題不會顯示 ruby，意思題則會顯示。
+  OpenAI Sites version 43 和 Cloudflare Worker version
+  `590ffb1a-3a58-44b7-b5ba-46bc41b0dd13` 均已發布，使用同一 runtime source
+  `4eec08d`。
 
 ## 8. Known limitations and trade-offs
 
@@ -538,25 +559,25 @@ Sites source credentials are short-lived. Obtain a fresh credential when require
 
 ## 12. Current dual-hosting deployment
 
-Status as of 2026-08-05:
+Status as of 2026-08-08:
 
 - Primary Worker: `uta-nihongo-davetchiu`
 - Primary URL: <https://uta-nihongo-davetchiu.d-chiu.workers.dev>
-- Primary Worker version: `c05c72d7-cbb2-4bd3-8ed3-b189a74398f1`
+- Primary Worker version: `590ffb1a-3a58-44b7-b5ba-46bc41b0dd13`
 - Retry Worker: `uta-nihongo-mirror-retry`
 - Retry Worker code version: `74cbf77b-e6b0-4e80-b9b4-bfc9e3dae50f`
 - Retry Worker current secret-change version: `0069df36-cf43-4e32-a718-fb027835df5b`
 - Retry schedule: `*/5 * * * *`
 - OpenAI mirror: <https://uta-nihongo-davetchiu.davechiu.chatgpt.site>
-- OpenAI Sites version: 41; environment revision: 4
-- Deployed source commit: `cd3b721` (`main`, pushed to GitHub and Sites source)
+- OpenAI Sites version: 43; environment revision: 4
+- Deployed source commit: `4eec08d` (`main`, pushed to GitHub and Sites source)
 - D1: `uta-nihongo-davetchiu-db`
 - D1 ID: `133398ee-df1d-4a55-a7ea-1f88e418f83e`
 - D1 location: APAC; logical binding remains `DB`.
 - Migrations `0000`, `0001` and `0002` were applied successfully.
 - Cloudflare D1 has 24 songs / 24 unique slugs; outbox was 0 after the final
   end-to-end validation.
-- Runtime source on both hosts is `cd3b721`; the following Git HEAD is a
+- Runtime source on both hosts is `4eec08d`; the following Git HEAD is a
   documentation-only handover update and was intentionally not redeployed.
 
 Both sites keep the existing password gate. `SITE_PASSWORD` and
