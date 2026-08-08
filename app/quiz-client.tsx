@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   loadSongLibrary,
@@ -11,6 +11,8 @@ import {
 import { SiteFooter, SiteHeader } from "./site-client";
 
 type QuestionKind = "reading" | "meaning";
+type QuizMode = "standard" | "advanced";
+type QuestionFormat = "choice" | "typed";
 
 type QuizQuestion = {
   id: string;
@@ -21,6 +23,7 @@ type QuizQuestion = {
   songTitle: string;
   correctAnswer: string;
   options: string[];
+  format: QuestionFormat;
 };
 
 type VocabularyEntry = {
@@ -48,14 +51,28 @@ function choices(correct: string, values: string[]): string[] {
   return shuffle([correct, ...alternatives.slice(0, 3)]);
 }
 
-function kanjiOnlyTerm(term: string): string {
-  const plainTerm = term
+function plainVocabularyTerm(term: string): string {
+  return term
     .replace(/\[([^\]]+)\]\{[^}]+\}/gu, "$1")
     .replace(
-      /([\p{Script=Han}々〆ヶ]+)[（(][ぁ-ゖァ-ヺー・]+[）)]/gu,
+      /([\p{Script=Han}々〆ヶ]+)[（(]([ぁ-ゖァ-ヺー・]+)[）)]/gu,
       "$1",
     );
+}
+
+function kanjiOnlyTerm(term: string): string {
+  const plainTerm = plainVocabularyTerm(term);
   return (plainTerm.match(/[\p{Script=Han}々〆ヶ]+/gu) ?? []).join("");
+}
+
+function normalizeReading(value: string): string {
+  return value
+    .normalize("NFKC")
+    .replace(/[ァ-ヶ]/gu, (character) =>
+      String.fromCodePoint((character.codePointAt(0) ?? 0) - 0x60),
+    )
+    .replace(/\s+/gu, "")
+    .trim();
 }
 
 function questionKey(kind: QuestionKind, word: Vocabulary): string {
@@ -71,10 +88,10 @@ function createQuestionPool(selected: VocabularyEntry[], all: VocabularyEntry[])
 
   return selected.flatMap(({ song, word }) =>
     (["reading", "meaning"] as const).flatMap((kind) => {
-      const promptTerm =
-        kind === "reading" ? kanjiOnlyTerm(word.term) : word.term.trim();
+      const term = plainVocabularyTerm(word.term).trim();
+      const promptTerm = kind === "reading" ? kanjiOnlyTerm(term) : term;
       if (
-        !word.term.trim() ||
+        !term ||
         !promptTerm ||
         !(kind === "reading" ? word.reading : word.meaning).trim()
       ) {
@@ -87,15 +104,45 @@ function createQuestionPool(selected: VocabularyEntry[], all: VocabularyEntry[])
       return [{
         id,
         kind,
-        term: word.term.trim(),
+        term,
         promptTerm,
         reading: word.reading.trim(),
         songTitle: plainSongTitle(song.title),
         correctAnswer,
         options: choices(correctAnswer, kind === "reading" ? readings : meanings),
+        format: "choice",
       }];
     }),
   );
+}
+
+function createAdvancedQuestionPool(selected: VocabularyEntry[]): QuizQuestion[] {
+  const seen = new Set<string>();
+
+  return selected.flatMap(({ song, word }) => {
+    const term = plainVocabularyTerm(word.term).trim();
+    const reading = word.reading.trim();
+    const id = ["advanced", term, normalizeReading(reading)].join("\u0000");
+    if (!term || !reading || seen.has(id)) return [];
+    seen.add(id);
+    return [{
+      id,
+      kind: "reading",
+      term,
+      promptTerm: term,
+      reading,
+      songTitle: plainSongTitle(song.title),
+      correctAnswer: reading,
+      options: [],
+      format: "typed",
+    }];
+  });
+}
+
+function isCorrectAnswer(question: QuizQuestion, answer: string): boolean {
+  return question.format === "typed"
+    ? normalizeReading(answer) === normalizeReading(question.correctAnswer)
+    : answer === question.correctAnswer;
 }
 
 function useLibrary() {
@@ -117,10 +164,12 @@ function useLibrary() {
 export function QuizView() {
   const songs = useLibrary();
   const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]);
+  const [mode, setMode] = useState<QuizMode>("standard");
   const [questionCount, setQuestionCount] = useState(10);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [typedAnswer, setTypedAnswer] = useState("");
   const [score, setScore] = useState(0);
 
   const songsWithVocabulary = useMemo(
@@ -139,10 +188,16 @@ export function QuizView() {
       allEntries.filter(({ song }) => selectedSlugs.includes(song.slug)),
     [allEntries, selectedSlugs],
   );
-  const availableQuestions = useMemo(
+  const standardQuestions = useMemo(
     () => createQuestionPool(selectedEntries, allEntries),
     [allEntries, selectedEntries],
   );
+  const advancedQuestions = useMemo(
+    () => createAdvancedQuestionPool(selectedEntries),
+    [selectedEntries],
+  );
+  const availableQuestions =
+    mode === "advanced" ? advancedQuestions : standardQuestions;
   const maximumQuestions = availableQuestions.length;
   const activeQuestion = questions[questionIndex];
   const isFinished = questions.length > 0 && questionIndex >= questions.length;
@@ -153,14 +208,16 @@ export function QuizView() {
     } else {
       setQuestionIndex((index) => index + 1);
       setSelectedAnswer(null);
+      setTypedAnswer("");
     }
   }
 
   useEffect(() => {
     if (
+      activeQuestion?.format !== "choice" ||
       !selectedAnswer ||
       !activeQuestion ||
-      selectedAnswer !== activeQuestion.correctAnswer
+      !isCorrectAnswer(activeQuestion, selectedAnswer)
     ) {
       return;
     }
@@ -170,6 +227,7 @@ export function QuizView() {
       } else {
         setQuestionIndex((index) => index + 1);
         setSelectedAnswer(null);
+        setTypedAnswer("");
       }
     }, 1100);
     return () => window.clearTimeout(timeout);
@@ -188,19 +246,34 @@ export function QuizView() {
     setQuestions(shuffle(availableQuestions).slice(0, count));
     setQuestionIndex(0);
     setSelectedAnswer(null);
+    setTypedAnswer("");
     setScore(0);
   }
 
   function answerQuestion(answer: string) {
     if (!activeQuestion || selectedAnswer) return;
     setSelectedAnswer(answer);
-    if (answer === activeQuestion.correctAnswer) setScore((value) => value + 1);
+    if (isCorrectAnswer(activeQuestion, answer)) setScore((value) => value + 1);
+  }
+
+  function submitTypedAnswer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (
+      !activeQuestion ||
+      activeQuestion.format !== "typed" ||
+      selectedAnswer ||
+      !typedAnswer.trim()
+    ) {
+      return;
+    }
+    answerQuestion(typedAnswer.trim());
   }
 
   function resetQuiz() {
     setQuestions([]);
     setQuestionIndex(0);
     setSelectedAnswer(null);
+    setTypedAnswer("");
     setScore(0);
   }
 
@@ -213,11 +286,43 @@ export function QuizView() {
             <span className="eyebrow">VOCABULARY QUIZ</span>
             <h1 id="quiz-title">生字測驗</h1>
             <p>
-              選擇想溫習的歌曲和題數，系統會隨機出讀音或意思題；讀音題只顯示漢字，避免假名提示答案。
+              選擇模式、想溫習的歌曲和題數，系統會隨機出題；讀音題不會用假名提示答案。
             </p>
 
+            <fieldset className="quiz-mode-picker">
+              <legend>1. 選擇模式</legend>
+              <div>
+                <label>
+                  <input
+                    type="radio"
+                    name="quiz-mode"
+                    value="standard"
+                    checked={mode === "standard"}
+                    onChange={() => setMode("standard")}
+                  />
+                  <span>
+                    <strong>標準版</strong>
+                    <small>讀音與意思選擇題</small>
+                  </span>
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="quiz-mode"
+                    value="advanced"
+                    checked={mode === "advanced"}
+                    onChange={() => setMode("advanced")}
+                  />
+                  <span>
+                    <strong>進階版</strong>
+                    <small>輸入完整讀音，只考讀音</small>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+
             <fieldset className="quiz-song-picker">
-              <legend>1. 選擇歌曲</legend>
+              <legend>2. 選擇歌曲</legend>
               {!songs.length ? (
                 <p className="quiz-loading">正在載入歌曲資料⋯⋯</p>
               ) : (
@@ -241,7 +346,7 @@ export function QuizView() {
 
             <section className="quiz-count-picker" aria-labelledby="quiz-count-label">
               <div>
-                <span id="quiz-count-label">2. 選擇題數</span>
+                <span id="quiz-count-label">3. 選擇題數</span>
                 <strong>
                   {maximumQuestions
                     ? `${Math.min(questionCount, maximumQuestions)} 題`
@@ -259,7 +364,9 @@ export function QuizView() {
               />
               <p id="quiz-count-note">
                 {maximumQuestions
-                  ? `已選生字可出 ${maximumQuestions} 題（每個生字最多問讀音和解釋各一次）。`
+                  ? mode === "advanced"
+                    ? `已選生字可出 ${maximumQuestions} 題（每個生字只會問一次完整讀音）。`
+                    : `已選生字可出 ${maximumQuestions} 題（每個生字最多問讀音和解釋各一次）。`
                   : "請先選擇至少一首有生字的歌曲。"}
               </p>
             </section>
@@ -303,10 +410,18 @@ export function QuizView() {
               <strong>{questionIndex + 1} / {questions.length}</strong>
             </div>
             <div className="quiz-question-copy">
-              <span className="eyebrow">{activeQuestion.kind === "reading" ? "讀音" : "意思"}</span>
+              <span className="eyebrow">
+                {activeQuestion.format === "typed"
+                  ? "進階讀音"
+                  : activeQuestion.kind === "reading"
+                    ? "讀音"
+                    : "意思"}
+              </span>
               <h1 id="quiz-question-title">
                 「
-                {activeQuestion.kind === "reading" ? (
+                {activeQuestion.format === "typed" ? (
+                  <span lang="ja">{activeQuestion.promptTerm}</span>
+                ) : activeQuestion.kind === "reading" ? (
                   <span lang="ja">{activeQuestion.promptTerm}</span>
                 ) : (
                   <ruby lang="ja">
@@ -315,57 +430,93 @@ export function QuizView() {
                   </ruby>
                 )}
                 」的
-                {activeQuestion.kind === "reading" ? "讀音" : "意思"}是？
+                {activeQuestion.format === "typed"
+                  ? "完整讀音"
+                  : activeQuestion.kind === "reading"
+                    ? "讀音"
+                    : "意思"}是？
               </h1>
-              <p>收錄於《{activeQuestion.songTitle}》</p>
+              <p>
+                {activeQuestion.format === "typed"
+                  ? "請用平假名輸入完整讀音。"
+                  : `收錄於《${activeQuestion.songTitle}》`}
+              </p>
             </div>
-            <div className="quiz-options" aria-live="polite">
-              {activeQuestion.options.map((option, index) => {
-                const isCorrect = option === activeQuestion.correctAnswer;
-                const isSelected = option === selectedAnswer;
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => answerQuestion(option)}
+            {activeQuestion.format === "choice" ? (
+              <div className="quiz-options" aria-live="polite">
+                {activeQuestion.options.map((option, index) => {
+                  const isCorrect = option === activeQuestion.correctAnswer;
+                  const isSelected = option === selectedAnswer;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => answerQuestion(option)}
+                      disabled={Boolean(selectedAnswer)}
+                      className={
+                        selectedAnswer
+                          ? isCorrect
+                            ? "is-correct"
+                            : isSelected
+                              ? "is-wrong"
+                              : ""
+                          : ""
+                      }
+                    >
+                      <span>{String.fromCharCode(65 + index)}</span>
+                      {option}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <form className="quiz-answer-form" onSubmit={submitTypedAnswer}>
+                <label htmlFor="quiz-typed-answer">輸入完整讀音</label>
+                <div>
+                  <input
+                    id="quiz-typed-answer"
+                    type="text"
+                    lang="ja"
+                    autoComplete="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    value={typedAnswer}
+                    onChange={(event) => setTypedAnswer(event.target.value)}
                     disabled={Boolean(selectedAnswer)}
-                    className={
-                      selectedAnswer
-                        ? isCorrect
-                          ? "is-correct"
-                          : isSelected
-                            ? "is-wrong"
-                            : ""
-                        : ""
-                    }
+                    placeholder="例：きこえる"
+                  />
+                  <button
+                    className="primary-button"
+                    type="submit"
+                    disabled={Boolean(selectedAnswer) || !typedAnswer.trim()}
                   >
-                    <span>{String.fromCharCode(65 + index)}</span>
-                    {option}
+                    提交
                   </button>
-                );
-              })}
-            </div>
+                </div>
+              </form>
+            )}
             {selectedAnswer && (
               <div className="quiz-answer-review">
                 <p
                   className={`quiz-feedback${
-                    selectedAnswer === activeQuestion.correctAnswer
+                    isCorrectAnswer(activeQuestion, selectedAnswer)
                       ? " is-correct"
                       : " is-wrong"
                   }`}
                 >
-                  {selectedAnswer === activeQuestion.correctAnswer
+                  {isCorrectAnswer(activeQuestion, selectedAnswer)
                     ? "答對！"
                     : "未答中。"}
                   正確答案：<strong>{activeQuestion.correctAnswer}</strong>
                 </p>
-                {selectedAnswer !== activeQuestion.correctAnswer && (
+                {(activeQuestion.format === "typed" ||
+                  !isCorrectAnswer(activeQuestion, selectedAnswer)) && (
                   <button
                     className="primary-button quiz-next-button"
                     type="button"
                     onClick={nextQuestion}
                   >
-                    下一題 <span aria-hidden="true">→</span>
+                    {questionIndex + 1 >= questions.length ? "查看結果" : "下一題"} <span aria-hidden="true">→</span>
                   </button>
                 )}
               </div>
