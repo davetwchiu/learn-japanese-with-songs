@@ -16,6 +16,7 @@ type QuizQuestion = {
   id: string;
   kind: QuestionKind;
   term: string;
+  reading: string;
   songTitle: string;
   correctAnswer: string;
   options: string[];
@@ -71,6 +72,7 @@ function createQuestionPool(selected: VocabularyEntry[], all: VocabularyEntry[])
         id,
         kind,
         term: word.term.trim(),
+        reading: word.reading.trim(),
         songTitle: plainSongTitle(song.title),
         correctAnswer,
         options: choices(correctAnswer, kind === "reading" ? readings : meanings),
@@ -271,7 +273,12 @@ export function QuizView() {
             <div className="quiz-question-copy">
               <span className="eyebrow">{activeQuestion.kind === "reading" ? "讀音" : "意思"}</span>
               <h1 id="quiz-question-title">
-                「<span lang="ja">{activeQuestion.term}</span>」的
+                「
+                <ruby lang="ja">
+                  {activeQuestion.term}
+                  <rt>{activeQuestion.reading}</rt>
+                </ruby>
+                」的
                 {activeQuestion.kind === "reading" ? "讀音" : "意思"}是？
               </h1>
               <p>收錄於《{activeQuestion.songTitle}》</p>
