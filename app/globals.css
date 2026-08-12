@@ -750,17 +750,13 @@ rt {
   min-width: 46px;
   padding: 0;
   transition:
-    background 160ms ease,
+    background 200ms ease,
     opacity 160ms ease;
 }
 
-.fixed-player-controls button:hover:not(:disabled) {
+.fixed-player-controls button:active:not(:disabled) {
   background: var(--red);
-}
-
-.fixed-player-controls button[aria-pressed="true"] {
-  background: var(--red);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.16);
+  transition-duration: 0s;
 }
 
 .fixed-player-controls button:disabled {

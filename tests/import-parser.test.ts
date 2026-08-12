@@ -742,14 +742,16 @@ test("adds fixed accessible controls for lessons with a ready YouTube player", a
   assert.match(player, /seekTo\(Math\.max\(0, currentTime \+ seconds\), true\)/);
   assert.match(player, /useImperativeHandle/);
   assert.match(player, /aria-label="影片播放控制"/);
-  for (const label of ["倒退 5 秒", "播放影片", "暫停影片", "快進 5 秒"]) {
+  for (const label of ["倒退 5 秒", "快進 5 秒"]) {
     assert.match(player, new RegExp(`aria-label="${label}"`));
   }
-  assert.equal((player.match(/disabled=\{disabled\}/g) ?? []).length, 4);
+  assert.equal((player.match(/disabled=\{disabled\}/g) ?? []).length, 3);
   assert.match(player, /onPlaybackStateChange\?\.\("playing"\)/);
   assert.match(player, /onPlaybackStateChange\?\.\("paused"\)/);
-  assert.match(player, /aria-pressed=\{playbackState === "playing"\}/);
-  assert.match(player, /aria-pressed=\{playbackState === "paused"\}/);
+  assert.match(player, /const isPlaying = playbackState === "playing"/);
+  assert.match(player, /isPlaying[\s\S]*?controllerRef\.current\?\.pause\(\)[\s\S]*?controllerRef\.current\?\.play\(\)/);
+  assert.match(player, /aria-label=\{isPlaying \? "暫停影片" : "播放影片"\}/);
+  assert.doesNotMatch(player, /aria-pressed/);
   assert.match(client, /playbackState=\{playerPlaybackState\}/);
   assert.match(styles, /\.fixed-player-controls\s*\{[\s\S]*?position:\s*fixed;/);
   assert.match(styles, /\.song-page-with-player-controls\s*\{[\s\S]*?padding-bottom:/);
@@ -764,6 +766,7 @@ test("adds fixed accessible controls for lessons with a ready YouTube player", a
   );
   assert.match(
     styles,
-    /\.fixed-player-controls button\[aria-pressed="true"\]\s*\{[\s\S]*?background:\s*var\(--red\)/,
+    /\.fixed-player-controls button:active:not\(:disabled\)\s*\{[\s\S]*?background:\s*var\(--red\)[\s\S]*?transition-duration:\s*0s/,
   );
+  assert.doesNotMatch(styles, /button\[aria-pressed="true"\]/);
 });

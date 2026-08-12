@@ -510,6 +510,8 @@ export function PlayerControlBar({
   disabled: boolean;
   playbackState: PlayerPlaybackState;
 }) {
+  const isPlaying = playbackState === "playing";
+
   return (
     <div
       className="fixed-player-controls"
@@ -526,21 +528,20 @@ export function PlayerControlBar({
       </button>
       <button
         type="button"
-        onClick={() => controllerRef.current?.play()}
+        onClick={() =>
+          isPlaying
+            ? controllerRef.current?.pause()
+            : controllerRef.current?.play()
+        }
         disabled={disabled}
-        aria-label="播放影片"
-        aria-pressed={playbackState === "playing"}
+        aria-label={isPlaying ? "暫停影片" : "播放影片"}
       >
-        <span className="fixed-player-play-icon" aria-hidden="true" />
-      </button>
-      <button
-        type="button"
-        onClick={() => controllerRef.current?.pause()}
-        disabled={disabled}
-        aria-label="暫停影片"
-        aria-pressed={playbackState === "paused"}
-      >
-        <span className="fixed-player-pause-icon" aria-hidden="true" />
+        <span
+          className={
+            isPlaying ? "fixed-player-pause-icon" : "fixed-player-play-icon"
+          }
+          aria-hidden="true"
+        />
       </button>
       <button
         type="button"

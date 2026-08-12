@@ -177,22 +177,20 @@ API 成功後，會無限期等待 Cache Storage 清理完成才 reload；裝置
 
 - 有 YouTube 影片的課文頁底部新增 fixed control bar，頁面捲動時仍保持可用；
   沒有影片的課文不會 render control bar。
-- Control bar 有播放、暫停、倒退 5 秒及快進 5 秒。所有操作都經既有
-  YouTube IFrame API player instance，沒有直接找 iframe 或操作 iframe DOM。
+- Control bar 有一個播放／暫停切換按鈕，以及倒退 5 秒和快進 5 秒。所有操作
+  都經既有 YouTube IFrame API player instance，沒有直接找 iframe 或操作 iframe DOM。
 - `YouTubePlayer` 以 imperative handle 對外提供 `play()`、`pause()` 和
   `seekBy()`；獨立 `PlayerControlBar` 使用同一 handle，沒有建立第二個 player。
-- IFrame API `onReady` 前四個按鈕全部 disabled；按鈕有中文 `aria-label`，
+- IFrame API `onReady` 前三個按鈕全部 disabled；按鈕有中文 `aria-label`，
   control bar 有 toolbar label，touch target 是 46px。
 - Control bar 和原有 iPhone resume 浮動鍵都使用 safe-area inset。浮動鍵已上移，
   不會蓋住 control bar；有播放器的課文亦增加 bottom padding，避免最後一段內容
   被 fixed bar 遮住。
 - 原有 sessionStorage、stable playback verification、4 秒 pause grace、
   autoplay-blocked fallback 及 lifecycle listeners 保持不變。
-- Play／Pause 會持續反映 YouTube IFrame API 的實際 state：`PLAYING` 時 Play
-  button 保持橙色，`PAUSED` 時 Pause button 保持橙色；從 inline iframe 直接操作
-  亦會同步。Buffering 不會清除上一個明確狀態，ended 則清除 highlight。
-- Play／Pause 使用 `aria-pressed` 同步暴露 active state，視覺和輔助技術都能
-  分辨目前狀態。
+- 播放器 state 決定切換按鈕顯示的下一個動作：`PLAYING` 時顯示暫停，其他狀態
+  顯示播放；從 inline iframe 直接操作亦會同步。按壓時才短暫顯示橙色，放開後
+  以 0.2 秒淡出，不會有常駐 highlight。
 
 ### 3.11 Markdown lesson editing
 
