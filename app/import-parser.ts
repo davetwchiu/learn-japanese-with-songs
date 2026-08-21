@@ -343,7 +343,11 @@ function withoutLabeledBlock(value: string, label: string): string {
 
 function grammarItems(value: string): Song["grammar"] {
   return markdownChunks(value).map(({ title, body }) => {
-    const examplesPart = body.split(/^例句[：:][ \t]*$/im)[1] ?? "";
+    const examplesPart =
+      body.split(/^例句[：:][ \t]*$/im)[1] ??
+      (blockAfterLabel(body, "歌詞")
+        ? withoutLabeledBlock(body, "歌詞")
+        : body);
     const examples = markdownPairs(examplesPart);
     const labeledSource = blockAfterLabel(body, "歌詞");
     const leadingBlock = body.trimStart().split(/\n\s*\n/)[0].trim();

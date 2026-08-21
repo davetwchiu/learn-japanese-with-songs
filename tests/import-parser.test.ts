@@ -123,6 +123,45 @@ test("extracts every learning section from a normal pasted lesson", () => {
   assert.equal(song.rawText, undefined);
 });
 
+test("recovers grammar examples when the legacy marker is missing", () => {
+  const song = parseImportedLesson(`# 《会いに行くのに》日文歌詞學習材料
+
+## 三、文法重點
+
+### 1. ～のに：明明……卻……
+
+歌詞：
+
+**あんなに近くにいたのに**
+
+結構：
+
+> 普通形＋のに
+
+「～のに」表示前後情況互相矛盾。
+
+**近（ちか）くにいたのに、気持（きも）ちは伝（つた）わらなかった。**
+明明曾經在身旁，心意卻沒有傳達出去。
+
+**何度（なんど）も練習（れんしゅう）したのに、うまくできなかった。**
+明明練習了很多次，卻還是做不好。
+
+## 四、生字及假名讀音
+
+| 生字 | 詞性／中文意思 | 用法或例句 |
+| --- | --- | --- |`);
+  assert.deepEqual(song.grammar[0].examples, [
+    {
+      jp: "近（ちか）くにいたのに、気持（きも）ちは伝（つた）わらなかった。",
+      zh: "明明曾經在身旁，心意卻沒有傳達出去。",
+    },
+    {
+      jp: "何度（なんど）も練習（れんしゅう）したのに、うまくできなかった。",
+      zh: "明明練習了很多次，卻還是做不好。",
+    },
+  ]);
+});
+
 test("reads the song title reading from the final lesson line", () => {
   const song = parseImportedLesson(`# 《桜が降る夜は》日文歌詞學習材料
 
@@ -571,6 +610,75 @@ test("keeps stored lessons when GitHub is temporarily unavailable", async () => 
       songs.map((song) => song.slug),
       ["saved-lesson"],
     );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("restores missing grammar examples from saved lesson markdown", async () => {
+  const storedSong: Song = {
+    slug: "saved-lesson",
+    title: "会いに行くのに",
+    titleReading: "",
+    artist: "テスト歌手",
+    level: "未分類",
+    publishedAt: "2026-08-21",
+    youtubeId: null,
+    tags: [],
+    summary: "",
+    lyrics: [{ jp: "歌です。", zh: "這是一首歌。" }],
+    context: [],
+    grammar: [
+      {
+        id: "-no-ni",
+        pattern: "～のに",
+        meaning: "明明……卻……",
+        source: "あんなに近くにいたのに",
+        structure: "普通形＋のに",
+        explanation: "表示前後情況互相矛盾。",
+        examples: [],
+      },
+    ],
+    vocabulary: [],
+    spoken: [],
+    pitfalls: [],
+    phrases: [],
+    sourceMarkdown: `# 《会いに行くのに》日文歌詞學習材料
+
+## 三、文法重點
+
+### 1. ～のに：明明……卻……
+
+歌詞：
+
+**あんなに近くにいたのに**
+
+結構：
+
+> 普通形＋のに
+
+「～のに」表示前後情況互相矛盾。
+
+**近（ちか）くにいたのに、気持（きも）ちは伝（つた）わらなかった。**
+明明曾經在身旁，心意卻沒有傳達出去。
+
+## 四、生字及假名讀音
+
+| 生字 | 詞性／中文意思 | 用法或例句 |
+| --- | --- | --- |`,
+  };
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.startsWith("https://api.github.com/")) {
+      throw new Error("GitHub temporarily unavailable");
+    }
+    if (url === "/api/songs") return Response.json({ songs: [storedSong] });
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  try {
+    const [song] = await loadSongLibrary();
+    assert.equal(song.grammar[0].examples.length, 1);
   } finally {
     globalThis.fetch = originalFetch;
   }

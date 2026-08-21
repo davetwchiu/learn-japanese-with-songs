@@ -134,6 +134,35 @@ export function normalizeSong(value: unknown): Song {
   };
 }
 
+async function restoreMissingGrammarExamples(song: Song): Promise<Song> {
+  if (
+    !song.sourceMarkdown ||
+    song.grammar.every((item) => item.examples.length > 0)
+  ) {
+    return song;
+  }
+  try {
+    const { parseImportedLesson } = await import("./import-parser");
+    const parsed = parseImportedLesson(song.sourceMarkdown);
+    const examplesById = new Map(
+      parsed.grammar.map((item) => [item.id, item.examples]),
+    );
+    const examplesByPattern = new Map(
+      parsed.grammar.map((item) => [item.pattern, item.examples]),
+    );
+    return {
+      ...song,
+      grammar: song.grammar.map((item) => {
+        const examples =
+          examplesById.get(item.id) ?? examplesByPattern.get(item.pattern);
+        return examples?.length ? { ...item, examples } : item;
+      }),
+    };
+  } catch {
+    return song;
+  }
+}
+
 export function isSong(value: unknown): value is Song {
   if (!value || typeof value !== "object") return false;
   const song = value as Partial<Song>;
@@ -236,9 +265,10 @@ async function storedSongs(): Promise<Song[]> {
     const response = await fetch("/api/songs", { cache: "no-store" });
     if (!response.ok) return [];
     const payload = (await response.json()) as { songs?: unknown[] };
-    return (payload.songs ?? [])
+    const songs = (payload.songs ?? [])
       .filter(isSong)
       .map((song) => normalizeSong(song));
+    return Promise.all(songs.map(restoreMissingGrammarExamples));
   } catch {
     return [];
   }
@@ -261,7 +291,9 @@ export async function fetchSong(slug: string): Promise<Song | null> {
     });
     if (stored.ok) {
       const payload = (await stored.json()) as { song?: unknown };
-      if (isSong(payload.song)) return normalizeSong(payload.song);
+      if (isSong(payload.song)) {
+        return restoreMissingGrammarExamples(normalizeSong(payload.song));
+      }
     }
     const response = await fetch(
       `${RAW_ROOT}/${encodeURIComponent(slug)}.json`,
