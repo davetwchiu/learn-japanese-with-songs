@@ -1,6 +1,6 @@
 # 聽歌學日文 — Handover Notes
 
-最後更新：2026-08-08（Asia/Hong_Kong）
+最後更新：2026-08-21（Asia/Hong_Kong）
 
 ## 1. Current snapshot
 
@@ -8,22 +8,22 @@
 - Primary full-function site: <https://uta-nihongo-davetchiu.d-chiu.workers.dev>
 - OpenAI read-only mirror: <https://uta-nihongo-davetchiu.davechiu.chatgpt.site>
 - Git branch: `main`
-- Cloudflare deployed source HEAD: `4a02785`
+- Cloudflare deployed source HEAD: `dd16982`
 - OpenAI Sites project ID: `appgprj_6a6c04056b208191bd5167021ce39a3e`
-- Latest deployed Sites version: 47
+- Latest deployed Sites version: 48
 - Hosted environment revision: 4
 - Storage: D1 binding `DB`; no R2 binding
 - Access: public Sites URL，另有 app-owned password gate
 
 現時 Git `origin` 是上方 GitHub repository。Cloudflare Worker 和 OpenAI
-Sites version 47 都使用 commit `4a02785`。Cloudflare 是唯一正常寫入來源；
+Sites version 48 都使用 commit `dd16982`。Cloudflare 是唯一正常寫入來源；
 OpenAI Sites 以 `MIRROR_READ_ONLY=1` 運行，會隱藏匯入／管理入口並拒絕
 POST、PATCH、DELETE，但相關程式碼沒有刪除。兩個 D1 仍是獨立 database，
 由已簽署的單向同步保持內容一致。
 
 Runtime 發佈完成後另有一個只更新本文件的 Git commit；依 documentation-only
 規則沒有為該 commit 重複 deploy。兩個站的 runtime source 仍完全相同，都是
-已完整驗證的 `4a02785`。
+已完整驗證的 `dd16982`。
 
 ## 2. Important security note
 
@@ -117,7 +117,7 @@ Production password 是 Sites runtime secret，不在 repository 內。
 
 1. 在 OpenAI Sites environment variables 把 `MIRROR_READ_ONLY` 改為 `0`
    （或移除）。不要移除 `SITE_PASSWORD` 或 D1 binding。
-2. 重新 deploy 最新已儲存的 production version（目前是 version 47），令新
+2. 重新 deploy 最新已儲存的 production version（目前是 version 48），令新
    environment revision 生效。
 3. 確認 `/import` 和課文的「管理課文與影片」連結重新出現；現有相同原始碼
    即恢復匯入、更新和刪除功能，無需改 code。
@@ -329,6 +329,7 @@ Final local browser result：在 393×852 iPhone mode、實際 YouTube player �
 | `307f922` | Keep incorrect quiz answers visible |
 | `dfe4c4e` | Add typed reading quiz mode |
 | `4a02785` | Simplify lesson player toggle |
+| `dd16982` | Fix grammar example rendering fallback |
 
 ## 7. Validation already performed
 
@@ -466,6 +467,16 @@ For the latest production source:
   revision 4 保持 `MIRROR_READ_ONLY=1`；Cloudflare Worker version
   `dcfda05c-115e-4299-9536-8c8d45b3a8bb` 已發佈，兩邊使用同一 runtime source。
   Cloudflare D1 有 24 首歌，`mirror_outbox` 為 0。
+- Grammar-example rendering release（`dd16982`）：normal／Cloudflare builds、
+  TypeScript、ESLint、Node test runner 29/29、兩個 Wrangler dry-run、
+  service-worker syntax 及 `git diff --check` 均通過。Parser fallback 會處理沒有
+  獨立 `例句：` marker 的 legacy Markdown；已有空 `examples` 的 D1 課文會從
+  `sourceMarkdown` 重新建立例句。D1-backed regression check 顯示「会いに行くのに」
+  （12 個文法項目）有 24 個例句，「愛の花」（9 個文法項目）有 24 個例句。
+  OpenAI Sites version 48／environment revision 4 保持 `MIRROR_READ_ONLY=1`；
+  Cloudflare Worker version `65156f29-574e-4fe1-86d6-91ef651d770e` 已發布。
+  兩個 production lesson URL 匿名請求均回應 200，受保護的 `/api/songs/:slug`
+  均正確回應 401；owner 已確認兩篇受影響課文在 production 顯示例句。
 
 ## 8. Known limitations and trade-offs
 
@@ -584,25 +595,25 @@ Sites source credentials are short-lived. Obtain a fresh credential when require
 
 ## 12. Current dual-hosting deployment
 
-Status as of 2026-08-08:
+Status as of 2026-08-21:
 
 - Primary Worker: `uta-nihongo-davetchiu`
 - Primary URL: <https://uta-nihongo-davetchiu.d-chiu.workers.dev>
-- Primary Worker version: `dcfda05c-115e-4299-9536-8c8d45b3a8bb`
+- Primary Worker version: `65156f29-574e-4fe1-86d6-91ef651d770e`
 - Retry Worker: `uta-nihongo-mirror-retry`
 - Retry Worker code version: `74cbf77b-e6b0-4e80-b9b4-bfc9e3dae50f`
 - Retry Worker current secret-change version: `0069df36-cf43-4e32-a718-fb027835df5b`
 - Retry schedule: `*/5 * * * *`
 - OpenAI mirror: <https://uta-nihongo-davetchiu.davechiu.chatgpt.site>
-- OpenAI Sites version: 47; environment revision: 4
-- Deployed source commit: `4a02785` (`main`, pushed to GitHub and Sites source)
+- OpenAI Sites version: 48; environment revision: 4
+- Deployed source commit: `dd16982` (`main`, pushed to GitHub and Sites source)
 - D1: `uta-nihongo-davetchiu-db`
 - D1 ID: `133398ee-df1d-4a55-a7ea-1f88e418f83e`
 - D1 location: APAC; logical binding remains `DB`.
 - Migrations `0000`, `0001` and `0002` were applied successfully.
 - Cloudflare D1 has 24 songs / 24 unique slugs; outbox was 0 after the final
   end-to-end validation.
-- Runtime source on both hosts is `4a02785`; the following Git HEAD is a
+- Runtime source on both hosts is `dd16982`; the following Git HEAD is a
   documentation-only handover update and was intentionally not redeployed.
 
 Both sites keep the existing password gate. `SITE_PASSWORD` and
